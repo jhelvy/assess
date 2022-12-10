@@ -40,7 +40,7 @@ remotes::install_github("jhelvy/gradeR")
 
 Load the library with:
 
-```{r}
+```{r, eval=FALSE}
 library(gradeR)
 ```
 
@@ -49,11 +49,3 @@ library(gradeR)
 - Author: *John Paul Helveston* https://www.jhelvy.com/
 - Date First Written: *Saturday, Dec 10, 2022*
 - License: [MIT](https://github.com/jhelvy/gradeR/blob/master/LICENSE.md)
-
-## Citation Information
-
-If you use this package for in a publication, I would greatly appreciate it if you cited it - you can get the citation by typing `citation("gradeR")` into R:
-
-```{r}
-citation("gradeR")
-```
