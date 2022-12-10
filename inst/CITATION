@@ -1,0 +1,11 @@
+citHeader("To cite gradeR in publications use:")
+
+citEntry(
+  entry    = "Manual",
+  title    = "gradeR: Course Assignment Grader",
+  author   = "John Paul Helveston",
+  year     = "2022",
+  note     = "R package",
+  url      = "https://jhelvy.github.io/gradeR/",
+  textVersion = "John Paul Helveston (2022). gradeR: Course Assignment Grader."
+)
