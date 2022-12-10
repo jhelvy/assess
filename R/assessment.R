@@ -2,8 +2,8 @@
 #'
 #' Description
 #'
-#' @param arg description
-#' @return Description
+#' @param pars Parameters defining assignment
+#' @param roster Course roster
 #' @export
 make_assessments <- function(pars, roster) {
 

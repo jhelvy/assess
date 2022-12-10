@@ -3,8 +3,7 @@
 #'
 #' Description
 #'
-#' @param arg description
-#' @return Description
+#' @param pars Parameters defining assignment
 #' @export
 save_grades <- function(pars) {
     get_grades(pars) %>%
@@ -17,7 +16,7 @@ save_grades <- function(pars) {
 #'
 #' Description
 #'
-#' @param arg description
+#' @param pars Parameters defining assignment
 #' @return Description
 #' @export
 get_grades <- function(pars) {
@@ -59,91 +58,6 @@ get_grades <- function(pars) {
 #' Description
 #'
 #' @param arg description
-#' @return Description
-#' @export
-get_grades_raw <- function(assessment, pars) {
-    grades <- assessment %>%
-        group_by(netID) %>%
-        mutate(grade = sum(assessment) / pars$maxScore)
-    return(grades)
-}
-
-#' Title
-#'
-#' Description
-#'
-#' @param arg description
-#' @return Description
-#' @export
-add_bonus <- function(df, bonus) {
-    if (nrow(bonus) == 0) { return(df) }
-    result <- bonus %>%
-        mutate(score = ifelse(score == 1, weight, 0)) %>%
-        select(netID, score) %>%
-        group_by(netID) %>%
-        summarise(score = sum(score)) %>%
-        right_join(df, by = 'netID') %>%
-        mutate(grade = grade + score)
-    return(result)
-}
-
-# Teams ----
-
-#' Title
-#'
-#' Description
-#'
-#' @param arg description
-#' @return Description
-#' @export
-save_grades_team <- function(pars, roster) {
-    get_grades_team(pars, roster) %>%
-        distinct(name, netID, grade) %>%
-        write_csv(here::here(
-            pars$category, pars$number, 'grades.csv'))
-}
-
-#' Title
-#'
-#' Description
-#'
-#' @param arg description
-#' @return Description
-#' @export
-get_grades_team <- function(pars, roster) {
-    assessment <- read_csv(
-        here::here(pars$category, pars$number, "assessment.csv")
-    )
-    grades <- roster %>%
-        filter(enrolled == 1) %>%
-        select(netID, name, team) %>%
-        left_join(assessment, by = c('team')) %>%
-        select(-days_late)
-
-    if (pars$indiv) {
-        assessment_indiv <- read_csv(
-            here::here(pars$category, pars$number, "assessment_indiv.csv")
-        )
-        grades <- rbind(grades, assessment_indiv)
-    }
-    grades <- grades %>%
-        group_by(netID) %>%
-        mutate(grade = sum(assessment) / sum(pars$weights$maxPoints)) %>%
-        select(
-            netID, name, team, question, assessment,
-            maxPoints, feedback, grade
-        )
-
-    return(grades)
-}
-
-
-#' Title
-#'
-#' Description
-#'
-#' @param arg description
-#' @return Description
 #' @export
 update_grades <- function() {
     # Compute all grades & copy results to box folders
@@ -155,7 +69,7 @@ update_grades <- function() {
 #' Description
 #'
 #' @param arg description
-#' @return Description
+#' @param roster Course roster
 #' @export
 get_all_grades <- function(assignments, roster) {
     netIDs <- roster %>%
@@ -190,13 +104,6 @@ get_all_grades <- function(assignments, roster) {
     return(grades)
 }
 
-#' Title
-#'
-#' Description
-#'
-#' @param arg description
-#' @return Description
-#' @export
 getLetter <- function(x) {
     scale <- tribble(
         ~letter, ~bound,
@@ -226,7 +133,6 @@ getLetter <- function(x) {
 #' Description
 #'
 #' @param arg description
-#' @return Description
 #' @export
 compute_grade <- function(grades) {
     result <- grades %>%
