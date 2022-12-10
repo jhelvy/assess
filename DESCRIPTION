@@ -1,4 +1,4 @@
-Package: gradeR
+Package: assess
 Title: Course Assignment Grader
 Version: 0.1.0
 Authors@R: c(
@@ -22,5 +22,5 @@ Suggests:
     here,
     knitr
     testthat
-URL: https://github.com/jhelvy/gradeR
-BugReports: https://github.com/jhelvy/gradeR/issues
+URL: https://github.com/jhelvy/assess
+BugReports: https://github.com/jhelvy/assess/issues
