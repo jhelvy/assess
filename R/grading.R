@@ -1,8 +1,6 @@
 
 #' Title
 #'
-#' Description
-#'
 #' @param pars Parameters defining assignment
 #' @export
 save_grades <- function(pars) {
@@ -13,8 +11,6 @@ save_grades <- function(pars) {
 }
 
 #' Title
-#'
-#' Description
 #'
 #' @param pars Parameters defining assignment
 #' @return Description
@@ -57,25 +53,14 @@ get_grades <- function(pars) {
 #'
 #' Description
 #'
-#' @param arg description
+#' @param assignments Data frame of all assignments
+#' @param roster Course roster data frame
+#' @param id Unique identifier for student or group / team
+#' @param amg Include an Alternative Minimum Grade (AMG) grade?
 #' @export
-update_grades <- function() {
-    # Compute all grades & copy results to box folders
-    source(here::here("code", "grade.R"))
-}
-
-#' Title
-#'
-#' Description
-#'
-#' @param arg description
-#' @param roster Course roster
-#' @export
-get_all_grades <- function(assignments, roster) {
-    netIDs <- roster %>%
-        filter(enrolled == 1) %>%
-        pull(netID)
-    missing_grades <- data.frame(netID = netIDs, grade = NA)
+get_all_grades <- function(assignments, roster, id, amg = FALSE) {
+    ids <- get_enrolled_ids(roster, id)
+    missing_grades <- data.frame(id = ids, grade = NA)
     grades <- list()
     for (i in 1:nrow(assignments)) {
         row <- assignments[i,]
@@ -86,21 +71,20 @@ get_all_grades <- function(assignments, roster) {
         } else {
             temp <- missing_grades
         }
-        temp <- temp %>%
-            mutate(
-                category = row$category,
-                number = row$number,
-                weight_category = row$weight_category,
-                weight_assignment = row$weight_assignment,
-                weight_category_amg = row$weight_category_amg,
-                weight_assignment_amg = row$weight_assignment_amg
-            )
+        temp$category <- row$category
+        temp$assign <- row$assign,
+        temp$weight <- row$weight,
+        temp$weight_category <- row$weight_category
+        if (amg) {
+            temp$weight_amg = row$weight_amg,
+            temp$weight_category_amg = row$weight_category_amg
+        }
         grades[[i]] <- temp
     }
     # Merge
     grades <- do.call(rbind, grades) %>%
         mutate(assignment = paste(category, number, sep = "_")) %>%
-        arrange(netID)
+        arrange({{id}})
     return(grades)
 }
 
@@ -132,33 +116,66 @@ getLetter <- function(x) {
 #'
 #' Description
 #'
-#' @param arg description
+#' @param grades Data frame of all grades for each item
+#' @param id Unique identifier for student or group / team
+#' @param drop Which assignments to drop from grade computation. Should be a
+#' named vector defining the category and number to drop.
 #' @export
-compute_grade <- function(grades) {
-    result <- grades %>%
-        group_by(netID) %>%
-        # Drop lowest quiz
-        mutate(is_quiz = ifelse(category == "quiz", 1, 0)) %>%
-        arrange(netID, desc(is_quiz), grade) %>%
-        slice(-1) %>%
-        # Drop lowest hw
-        mutate(is_hw = ifelse(category == "hw", 1, 0)) %>%
-        arrange(netID, desc(is_hw), grade) %>%
-        slice(-1) %>%
-        # Compute grade
-        filter(!is.na(grade)) %>%
-        group_by(netID, category, weight_category, weight_assignment) %>%
-        summarise(grade = mean(grade)) %>%
-        # Redistribute weight
-        group_by(netID) %>%
-        mutate(
-            weight_missing = 1 - sum(weight_category),
-            count = n(),
-            weight_category = weight_category + weight_missing / count) %>%
-        # Compute score
-        summarise(score = sum(weight_category*grade)) %>%
+compute_grade <- function(grades, id, drop = NULL) {
+    result <- grades
+    if (!is.null(drop)) {
+        for (i in 1:length(drop)) {
+            result <- result %>%
+                group_by({{studentID}}) %>%
+                drop_lowest(names(drop[i]), drop[i])
+        }
+    }
+
+    # Compute grade for each category
+    result <- result %>%
+        group_by({{studentID}}, category) %>%
+        mutate(grade_category = mean(grade, na.rm = TRUE))
+
+    # Insert mean category grade for missing assignments
+    # (those not yet graded)
+    missing <- which(is.na(result$grade))
+    result[missing,]$grade <- result[missing,]$grade_category
+
+    # For max score, insert 1 for missing assignments
+    result$grade_max <- result$grade
+    result[missing,]$grade_max <- 1
+
+    # Compute scores
+    result <- result %>%
+        group_by({{studentID}}) %>%
+        summarise(
+            score = sum(weight_assignment*grade),
+            score_max = sum(weight_assignment*grade_max)
+        ) %>%
         mutate(
             letter = getLetter(score),
-            score = round(score, 3))
+            score = round(score, 3),
+            letter_max = getLetter(score_max),
+            score_max = round(score_max, 3)
+        ) %>%
+        arrange(desc(score))
+    return(result)
+}
+
+drop_lowest <- function(df, cat, number) {
+    # Remove lowest row
+    result <- df %>%
+        mutate(is_cat = ifelse(category == cat, 1, 0)) %>%
+        arrange(netID, desc(is_cat), grade) %>%
+        slice(-number) %>%
+        select(-is_cat)
+    # Redistribution assignment weight for category
+    cat_ids <- which(result$category == cat)
+    weight <- unique(result[cat_ids,]$weight_category)
+    n <- result[cat_ids,] %>%
+        mutate(n = n()) %>%
+        pull(n) %>%
+        unique()
+    result[cat_ids,]$weight_assignment <- weight / n
     return(result)
 }

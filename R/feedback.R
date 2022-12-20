@@ -1,60 +1,48 @@
-#' Make pdf reports
-#'
 #' Make pdf reports of assignment feedback
 #'
 #' @param pars Parameters defining assignment
+#' @param roster Course roster data frame
 #' @param template qmd template for making report.
-#' @param studentID Individual studentID to make report for.
+#' @param id Unique identifier for student or group / team
+#' @param indiv One specific id (to build just one report instead of all)
 #' Defaults to `NULL` in which case reports are made for all students.
 #' @export
-make_reports <- function(pars, template, netID = NULL) {
+make_reports <- function(pars, roster, template, id, indiv = NULL) {
     # Create feedback folder (if doesn't exist)
-    make_dir(here::here(pars$category, pars$number, 'feedback'))
+    make_dir(here::here('assignments', pars$assign, 'feedback'))
     # Get grades
     grades <- get_grades(pars)
-    if (!is.null(netID)) {
-        # Build only the one report for the provided netID
-        build_report(grades, pars, template, netID)
+    if (!is.null(indiv)) {
+        # Build only the one report for the provided id
+        build_report(grades, pars, template, id, indiv)
     } else {
-        # Build report for each netID
-        netIDs <- unique(grades$netID)
-        for (i in seq(length(netIDs))) {
-            if (! (netIDs[i] %in% roster$netID)) { next }
-            build_report(grades, pars, template, netIDs[i])
+        # Build report for each id
+        ids <- pull(grades, {{id}})
+        for (i in seq(length(ids))) {
+            build_report(grades, pars, template, id, indiv = ids[i])
         }
     }
 }
 
-build_report <- function(grades, pars, template, netID_i) {
-    df <- filter(grades, netID == netID_i)
-    output_file <- get_report_path(pars, netID_i)
-    student <- unique(df$name)
+build_report <- function(grades, pars, template, id, indiv) {
+    df <- filter(grades, {{id}} == indiv)
+    output_file <- get_report_path(pars, indiv)
     params_temp <- list(
-        df      = df,
-        title   = pars$title,
-        student = student)
-    if (pars$feedback == "pdf") {
-        rmarkdown::render(
-            input       = template,
-            output_file = output_file,
-            params      = params_temp)
-    } else {
-        pagedown::chrome_print(rmarkdown::render(
-            input       = template,
-            output_file = tempfile(fileext = "html"),
-            params      = params_temp),
-            output_file
-        )
-    }
+        df    = df,
+        title = pars$title,
+        name  = unique(df$name)
+    )
+    pagedown::chrome_print(rmarkdown::render(
+        input       = template,
+        output_file = tempfile(fileext = "html"),
+        params      = params_temp),
+        output_file
+    )
 }
 
-get_report_name <- function(pars, netID) {
-    return(paste(netID, pars$category, pars$number, 'feedback.pdf', sep = "_"))
-}
-
-get_report_path <- function(pars, netID = NULL) {
-    report_name <- get_report_name(pars, netID)
-    return(here::here(pars$category, pars$number, 'feedback', report_name))
+get_report_path <- function(pars, indiv = NULL) {
+    report_name <- paste0(indiv, "-", pars$assign, '.pdf')
+    return(here::here('assignments', pars$assign, 'feedback', report_name))
 }
 
 #' Update feedback for all assignments
@@ -63,23 +51,23 @@ get_report_path <- function(pars, netID = NULL) {
 #'
 #' @param assignments Assignments data frame
 #' @param roster Course roster
+#' @param id Unique identifier for student or group / team
 #' @export
-update_feedback <- function(assignments, roster) {
+update_feedback <- function(assignments, roster, id) {
     categories <- unique(assignments$category)
+    ids <- get_enrolled_ids(roster, id)
     for (i in 1:nrow(assignments)) {
         assign <- assignments[i,]
         for (j in 1:nrow(roster)) {
-            student <- roster[j,]
-            report_path <- get_report_path(assign, student$netID)
+            id <- ids[j]
+            report_path <- get_report_path(assign, id)
             if (file.exists(report_path)) {
-                print(paste0(
-                    assign$category, assign$number, "-", student$netID)
-                )
+                print(paste0(assign$assign, "-", id))
                 file.copy(
                     from = report_path,
                     to = file.path(
-                        path_box, student$box, 'feedback',
-                        get_report_name(assign, student$netID)),
+                        path_box, student$box,
+                        basename(report_path)),
                     overwrite = TRUE
                 )
             }

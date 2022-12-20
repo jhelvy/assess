@@ -52,3 +52,62 @@ save_raw <- function(text, path) {
     writeLines(text, fileConn)
     close(fileConn)
 }
+
+#' Unzip or copy submissions
+#'
+#' If bb submission is a zip file, it unzips the contents, otherwise it copies
+#' the file over
+#'
+#' @param text Text to save
+#' @param path Path to save to
+#' @export
+unzip_submissions <- function(pars, roster, id, junkpathsSetting = FALSE) {
+
+    # Create unzipped submissions folder if it does't exist
+    path <- here::here("assignments", pars$assign, "submissions")
+    make_dir(here::here("assignments", pars$assign, "unzipped"))
+
+    # Unzip or copy each file
+    ids <- get_enrolled_ids(roster, id)
+    files <- file.path(path, list.files(path))
+    cat("Missing:\n")
+    for (i in 1:length(ids)) {
+        id <- ids[i]
+        studentFiles <- files[which(str_detect(files, id))]
+        if (length(studentFiles) == 0) {
+            cat(id, '\n')
+            next()
+        }
+        dest <- here::here("assignments", pars$assign, "unzipped", id)
+        for (j in 1:length(studentFiles)) {
+            import_file(studentFiles[j], dest, junkpathsSetting)
+        }
+    }
+}
+
+get_enrolled_ids <- function(roster, id) {
+    result <- roster %>%
+        filter(enrolled == 1) %>%
+        pull({{id}})
+    return(result)
+}
+
+import_file <- function(file, destination, junkpathsSetting) {
+
+    # If it's a zip file, unzip it to the destination
+
+    if (fs::path_ext(str_to_lower(file)) == 'zip') {
+
+        zip::unzip(
+            zipfile = file,
+            exdir = destination,
+            junkpaths = junkpathsSetting
+        )
+
+    # Otherwise just copy the file there
+
+    } else {
+        file.copy(from = file, to = file.path(destination, basename(file)))
+    }
+
+}
