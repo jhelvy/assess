@@ -76,7 +76,7 @@ get_all_grades <- function(assignments, roster, id, amg = FALSE) {
         temp$weight <- row$weight
         temp$weight_category <- row$weight_category
         if (amg) {
-            temp$weight_amg = row$weight_amg,
+            temp$weight_amg = row$weight_amg
             temp$weight_category_amg = row$weight_category_amg
         }
         grades[[i]] <- temp
