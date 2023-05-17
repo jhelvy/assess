@@ -1,38 +1,5 @@
 
-#' Get an assessment scale
-#'
-#' @param n Scale size
-#' @export
-get_scale <- function(n) {
-    if (n == 3) {
-        return(data.frame(
-            assessment = seq(0, 3),
-            score = c(0, 0.5, 0.8, 1)
-        ))
-    }
-    if (n == 4) {
-        return(data.frame(
-            assessment = seq(0, 4),
-            score = c(0, 0.5, 0.75, 0.9, 1)
-        ))
-    }
-    if (n == 5) {
-        return(data.frame(
-            assessment = seq(0, 5),
-            score = c(0, 0.5, 0.7, 0.8, 0.9, 1)
-        ))
-    }
-    if (n == 6) {
-        return(data.frame(
-            assessment = seq(0, 6),
-            score = c(0, 0.5, 0.7, 0.75, 0.8, 0.9, 1)
-        ))
-    }
-}
-
-#' Makes a directory
-#'
-#' Makes a directory
+#' Make a directory
 #'
 #' @param path Path to directory
 #' @export
@@ -40,9 +7,7 @@ make_dir <- function(path) {
     if (!dir.exists(path)) { dir.create(path) }
 }
 
-#' Write text to file
-#'
-#' Write text to file
+#' Write plain text to file
 #'
 #' @param text Text to save
 #' @param path Path to save to
@@ -55,40 +20,49 @@ save_raw <- function(text, path) {
 
 #' Unzip or copy submissions
 #'
-#' If bb submission is a zip file, it unzips the contents, otherwise it copies
-#' the file over
+#' If submission is a zip file, it unzips the contents, otherwise it copies
+#' the file over to `path`
 #'
-#' @param text Text to save
-#' @param path Path to save to
+#' @param pars List of features defining an assignment
+#' @param roster Class roster (data frame)
+#' @param junkpathsSetting Ignore the file structure in the zipped file?
+#' Defaults to `FALSE`.
 #' @export
-unzip_submissions <- function(pars, roster, id, junkpathsSetting = FALSE) {
+unzip_submissions <- function(pars, roster, junkpathsSetting = FALSE) {
 
     # Create unzipped submissions folder if it does't exist
     path <- here::here("assignments", pars$assign, "submissions")
     make_dir(here::here("assignments", pars$assign, "unzipped"))
 
     # Unzip or copy each file
-    ids <- get_enrolled_ids(roster, id)
+    ids <- roster |>
+        dplyr::filter(enrolled == 1) |>
+        dplyr::mutate(gwid = stringr::str_to_lower(gwid)) |>
+        dplyr::select(netID, gwid)
     files <- file.path(path, list.files(path))
     cat("Missing:\n")
-    for (i in 1:length(ids)) {
-        id <- ids[i]
-        studentFiles <- files[which(str_detect(files, id))]
+    for (i in 1:nrow(ids)) {
+        id <- ids[i,]
+        studentFiles <- c(
+            files[which(stringr::str_detect(files, id$netID))],
+            files[which(stringr::str_detect(files, id$gwid))]
+        )
         if (length(studentFiles) == 0) {
-            cat(id, '\n')
+            cat(id$netID, '\n')
             next()
         }
-        dest <- here::here("assignments", pars$assign, "unzipped", id)
+        dest <- here::here("assignments", pars$assign, "unzipped", id$netID)
+        make_dir(dest)
         for (j in 1:length(studentFiles)) {
             import_file(studentFiles[j], dest, junkpathsSetting)
         }
     }
 }
 
-get_enrolled_ids <- function(roster, id) {
-    result <- roster %>%
-        filter(enrolled == 1) %>%
-        pull({{id}})
+get_enrolled_ids <- function(roster) {
+    result <- roster |>
+        dplyr::filter(enrolled == 1) |>
+        dplyr::pull(netID)
     return(result)
 }
 
@@ -96,7 +70,7 @@ import_file <- function(file, destination, junkpathsSetting) {
 
     # If it's a zip file, unzip it to the destination
 
-    if (fs::path_ext(str_to_lower(file)) == 'zip') {
+    if (fs::path_ext(stringr::str_to_lower(file)) == 'zip') {
 
         zip::unzip(
             zipfile = file,

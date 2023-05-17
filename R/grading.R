@@ -1,71 +1,81 @@
 
-#' Title
+#' Save all grades to file
 #'
 #' @param pars Parameters defining assignment
 #' @export
 save_grades <- function(pars) {
-    get_grades(pars) %>%
-        distinct(name, netID, grade) %>%
-        write_csv(here::here(
-            pars$category, pars$number, 'grades.csv'))
+    get_grades(pars) |>
+        distinct(name, netID, grade) |>
+        readr::write_csv(here::here(
+            "assignments", pars$assign, "grades.csv"))
 }
 
-#' Title
+#' Get grades for an assignments
 #'
-#' @param pars Parameters defining assignment
+#' @param pars List of parameters defining assignment
+#' @param roster Course roster data frame
 #' @return Description
 #' @export
-get_grades <- function(pars) {
-    path <- here::here(pars$category, pars$number, "assessment.csv")
-    assessment <- read_csv(path)
-    if (pars$grading == "raw") {
-        return(get_grades_raw(assessment, pars))
+get_grades <- function(pars, roster) {
+    path <- here::here("assignments", pars$assign, "assessment.csv")
+    assessment <- readr::read_csv(path)
+    if (pars$weighted == FALSE) {
+        return(get_grades_unweighted(assessment, pars))
     }
-    scores <- assessment %>%
-        mutate(question = as.character(question)) %>%
-        left_join(pars$scale, by = 'assessment') %>%
-        left_join(pars$weights, by = 'question') %>%
-        filter(!is.na(weight))
-    if ("graded" %in% names(scores)) {
-        scores <- scores %>%
-            filter(graded == 1) %>%
-            select(-graded)
-    }
-    bonus <- scores %>%
-        filter(str_detect(question, 'bonus'))
-    grades <- scores %>%
-        filter(! str_detect(question, 'bonus')) %>%
-        group_by(netID) %>%
-        summarise(grade = weighted.mean(score, weight)) %>%
-        add_bonus(bonus) %>%
-        select(netID, grade) %>%
-        right_join(scores, by = 'netID') %>%
-        full_join(select(roster, netID, enrolled), by = "netID") %>%
-        filter(enrolled == 1) %>%
-        mutate(
-            missing = ifelse(is.na(grade), 1, 0),
-            grade = ifelse(missing == 1, 0, grade)) %>%
-        arrange(desc(missing))
+    scores <- assessment |>
+        dplyr::mutate(question = as.character(question)) |>
+        dplyr::left_join(pars$weights, by = 'question') |>
+        dplyr::filter(!is.na(weight)) |>
+        rename(score = assessment)
+    bonus <- scores |>
+        dplyr::filter(stringr::str_detect(question, 'bonus'))
+    grades <- scores |>
+        dplyr::filter(! stringr::str_detect(question, 'bonus')) |>
+        dplyr::group_by(netID) |>
+        dplyr::summarise(grade = stats::weighted.mean(score, weight)) |>
+        add_bonus(bonus)
+    grades$score <- NULL
+    grades <- scores |>
+        dplyr::left_join(grades, by = 'netID') |>
+        dplyr::full_join(
+            dplyr::select(roster, netID, enrolled), by = "netID") |>
+        dplyr::filter(enrolled == 1)
     return(grades)
 }
 
-#' Title
-#'
-#' Description
+get_grades_unweighted <- function(assessment, pars) {
+    grades <- assessment |>
+        dplyr::group_by(netID) |>
+        dplyr::mutate(grade = sum(assessment) / pars$maxScore)
+    return(grades)
+}
+
+add_bonus <- function(df, bonus) {
+    if (nrow(bonus) == 0) { return(df) }
+    result <- bonus |>
+        dplyr::mutate(score = ifelse(score == 1, weight, 0)) |>
+        dplyr::select(netID, score) |>
+        dplyr::group_by(netID) |>
+        dplyr::summarise(score = sum(score)) |>
+        dplyr::right_join(df, by = 'netID') |>
+        dplyr::mutate(grade = grade + score)
+    return(result)
+}
+
+#' Get grades for all assignments
 #'
 #' @param assignments Data frame of all assignments
 #' @param roster Course roster data frame
-#' @param id Unique identifier for student or group / team
 #' @param amg Include an Alternative Minimum Grade (AMG) grade?
 #' @export
-get_all_grades <- function(assignments, roster, id, amg = FALSE) {
-    ids <- get_enrolled_ids(roster, id)
-    missing_grades <- data.frame(id = ids, grade = NA)
+get_all_grades <- function(assignments, roster) {
+    ids <- get_enrolled_ids(roster)
+    missing_grades <- data.frame(netID = ids, grade = NA)
     grades <- list()
     for (i in 1:nrow(assignments)) {
         row <- assignments[i,]
         if (file.exists(row$path)) {
-            temp <- suppressMessages(read_csv(row$path))
+            temp <- suppressMessages(readr::read_csv(row$path))
             temp$missing <- NULL
             temp$name <- NULL
         } else {
@@ -74,22 +84,22 @@ get_all_grades <- function(assignments, roster, id, amg = FALSE) {
         temp$category <- row$category
         temp$assign <- row$assign
         temp$weight <- row$weight
-        temp$weight_category <- row$weight_category
-        if (amg) {
-            temp$weight_amg = row$weight_amg
-            temp$weight_category_amg = row$weight_category_amg
-        }
+        temp$weight_amg = row$weight_amg
+        temp$order <- row$order
         grades[[i]] <- temp
     }
     # Merge
-    grades <- do.call(rbind, grades) %>%
-        mutate(assignment = paste(category, number, sep = "_")) %>%
-        arrange({{id}})
+    grades <- do.call(rbind, grades) |>
+        dplyr::arrange(netID, order)
     return(grades)
 }
 
+#' Convert numeric grade to letter
+#'
+#' @param x Numeric grade, 0 to 1.
+#' @export
 getLetter <- function(x) {
-    scale <- tribble(
+    scale <- tibble::tribble(
         ~letter, ~bound,
         'A',  0.94,
         'A-', 0.90,
@@ -112,29 +122,39 @@ getLetter <- function(x) {
     return(letters)
 }
 
-#' Title
+#' Save final grades
 #'
-#' Description
+#' Writes final grades to disc as grades.csv
 #'
-#' @param grades Data frame of all grades for each item
-#' @param id Unique identifier for student or group / team
+#' @param assignments Data frame of all assignments
+#' @param roster Course roster data frame
+#' @param weights Column name defining weights to use in computing grade.
 #' @param drop Which assignments to drop from grade computation. Should be a
 #' named vector defining the category and number to drop.
+#' @param file Name of file to save. Defaults to `'grades.csv'`.
 #' @export
-compute_grade <- function(grades, id, drop = NULL) {
-    result <- grades
+save_final_grades <- function(
+    assignments, roster, weights, drop = NULL, file = 'grades.csv'
+) {
+    grades <- get_all_grades(assignments, roster)
+
+    # Drop lowest assignments
     if (!is.null(drop)) {
         for (i in 1:length(drop)) {
-            result <- result %>%
-                group_by({{studentID}}) %>%
-                drop_lowest(names(drop[i]), drop[i])
+            grades <- grades |>
+                dplyr::group_by(netID) |>
+                drop_lowest(names(drop[i]), drop[i], assignments)
         }
     }
 
     # Compute grade for each category
-    result <- result %>%
-        group_by({{studentID}}, category) %>%
-        mutate(grade_category = mean(grade, na.rm = TRUE))
+    result <- grades |>
+        dplyr::group_by(netID, category) |>
+        dplyr::mutate(
+            grade_category = mean(grade, na.rm = TRUE),
+            # If no grade yet in category, replace with NA
+            grade_category = ifelse(is.nan(grade_category), NA, grade_category)
+        )
 
     # Insert mean category grade for missing assignments
     # (those not yet graded)
@@ -145,37 +165,102 @@ compute_grade <- function(grades, id, drop = NULL) {
     result$grade_max <- result$grade
     result[missing,]$grade_max <- 1
 
-    # Compute scores
-    result <- result %>%
-        group_by({{studentID}}) %>%
-        summarise(
-            score = sum(weight_assignment*grade),
-            score_max = sum(weight_assignment*grade_max)
-        ) %>%
-        mutate(
-            letter = getLetter(score),
-            score = round(score, 3),
-            letter_max = getLetter(score_max),
-            score_max = round(score_max, 3)
-        ) %>%
-        arrange(desc(score))
+    # Set the weights to use
+    result$weight <- dplyr::pull(result[weights])
+    result <- result |>
+        dplyr::group_by(netID, category) |>
+        dplyr::mutate(weight = weight / n())
+    result$weight_max <- result$weight
+
+    # If any grades are still missing, then distribute their weight
+    # across the other categories
+    temp <- result |>
+        dplyr::mutate(weight_fill = ifelse(is.na(grade), weight, 0)) |>
+        dplyr::group_by(netID) |>
+        dplyr::summarise(weight_fill = sum(weight_fill))
+    result <- result |>
+        dplyr::left_join(temp, by = 'netID') |>
+        dplyr::group_by(netID) |>
+        dplyr::mutate(
+            missing = is.na(grade),
+            grade = ifelse(missing, 0, grade),
+            weight = ifelse(missing, 0, weight),
+            weight_fill = ifelse(missing, 0, weight_fill)
+        ) |>
+        dplyr::group_by(netID, missing) |>
+        dplyr::mutate(weight = weight + (weight_fill / n()))
+
+    # Compute grades
+
+    result <- result |>
+        dplyr::group_by(netID) |>
+        dplyr::summarise(
+            grade = sum(weight*grade),
+            grade_max = sum(weight_max*grade_max)
+        ) |>
+        dplyr::mutate(
+            grade_max = ifelse(grade > grade_max, grade, grade_max),
+            letter = getLetter(grade),
+            grade = round(grade, 3),
+            letter_max = getLetter(grade_max),
+            grade_max = round(grade_max, 3)
+        ) |>
+        dplyr::arrange(desc(grade))
+    readr::write_csv(result, file)
+}
+
+drop_lowest <- function(df, cat, number, assignments) {
+    result <- df |>
+        dplyr::mutate(is_cat = ifelse(category == cat, 1, 0)) |>
+        dplyr::arrange(netID, desc(is_cat), grade) |>
+        slice(-(1:number)) |>
+        dplyr::select(-is_cat)
     return(result)
 }
 
-drop_lowest <- function(df, cat, number) {
-    # Remove lowest row
-    result <- df %>%
-        mutate(is_cat = ifelse(category == cat, 1, 0)) %>%
-        arrange(netID, desc(is_cat), grade) %>%
-        slice(-number) %>%
-        select(-is_cat)
-    # Redistribution assignment weight for category
-    cat_ids <- which(result$category == cat)
-    weight <- unique(result[cat_ids,]$weight_category)
-    n <- result[cat_ids,] %>%
-        mutate(n = n()) %>%
-        pull(n) %>%
-        unique()
-    result[cat_ids,]$weight_assignment <- weight / n
-    return(result)
+#' Update grades on Box
+#'
+#' @param assignments Assignments data frame
+#' @param roster Course roster data frame
+#' @param path_box Path to root box folder
+#' @export
+update_grades <- function(assignments, roster, path_box) {
+    grades_final <- readr::read_csv(here::here('grades', 'grades.csv'))
+    grades <- get_all_grades(assignments, roster)
+
+    grades_report <- grades |>
+        dplyr::group_by(netID, category) |>
+        dplyr::mutate(weight = weight / n()) |>
+        dplyr::select(netID, assignment = assign, score = grade, weight) |>
+        dplyr::mutate(weight = round(weight, 3))
+
+    for (i in 1:nrow(roster)) {
+        row <- roster[i,]
+        if (row$enrolled == 0) { next }
+
+        # Write grades for each assignment
+        temp_grades <- grades_report |>
+            dplyr::filter(netID == row$netID) |>
+            dplyr::select(-netID) |>
+            dplyr::mutate(score = round(score, 3))
+        readr::write_csv(
+            temp_grades,
+            file.path(path_box, row$box, "grade_assignments.csv")
+        )
+
+        # Write running final grade
+        temp <- grades_final |>
+            dplyr::filter(netID == row$netID) |>
+            dplyr::select(-netID)
+        score <- dplyr::select(temp, grade, letter)
+        amg <- dplyr::select(temp, dplyr::ends_with("amg"))
+        max <- dplyr::select(temp, dplyr::ends_with("max"))
+        names(amg) <- names(score)
+        names(max) <- names(score)
+        temp_grade <- rbind(score, amg, max)
+        temp_grade$category <- c('Current:', 'AMG:', 'Max possible:')
+        temp_grade <- temp_grade |> dplyr::select(category, grade, letter)
+        readr::write_csv(
+            temp_grade, file.path(path_box, row$box, "grade_course.csv"))
+    }
 }

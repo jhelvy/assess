@@ -1,4 +1,4 @@
-url: https://jhelvy.github.io/gradeR/
+url: https://jhelvy.github.io/assess/
 
 home:
   title: Course assignment grader for courses taught by Professor John Paul Helveston
@@ -9,14 +9,14 @@ template:
     bootswatch: cosmo
   opengraph:
     image:
-      src: https://jhelvy.github.io/gradeR/reference/figures/logo.png
-      alt: "Logo for the gradeR package"
+      src: https://jhelvy.github.io/assess/reference/figures/logo.png
+      alt: "Logo for the assess package"
     twitter:
       creator: "@JohnHelveston"
       card: summary
 
 navbar:
-  title: "gradeR"
+  title: "assess"
   left:
     - icon: fa-home fa-lg
       href: index.html

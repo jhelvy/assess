@@ -1,6 +1,6 @@
 Package: assess
 Title: Course Assignment Grader
-Version: 0.1.0
+Version: 0.2.0
 Maintainer: John Helveston <john.helveston@gmail.com>
 Authors@R: c(
     person(given   = "John",
@@ -17,11 +17,20 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.3
 VignetteBuilder: knitr
 Depends:
-    R (>= 3.5.0)
+    R (>= 4.1.0)
 Suggests:
     tidyverse,
     here,
     knitr,
     testthat
+Imports:
+    dplyr,
+    fs,
+    here,
+    pagedown,
+    rmarkdown,
+    readr,
+    stringr,
+    tibble
 URL: https://github.com/jhelvy/assess
 BugReports: https://github.com/jhelvy/assess/issues
