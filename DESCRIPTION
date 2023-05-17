@@ -21,7 +21,7 @@ Depends:
 Suggests:
     tidyverse,
     here,
-    knitr
+    knitr,
     testthat
 URL: https://github.com/jhelvy/assess
 BugReports: https://github.com/jhelvy/assess/issues
