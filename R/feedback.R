@@ -54,23 +54,22 @@ get_report_path <- function(assign, indiv = NULL) {
 #' @param indiv One specific id (to build just one report instead of all)
 #' Defaults to `NULL` in which case reports are made for all students.
 #' @export
-update_feedback <- function(assignments, roster, path_box, indiv = NULL) {
-    ids <- get_enrolled_ids(roster)
-    if (!is.null(indiv)) {
-        ids <- indiv
-    }
+update_feedback <- function(assignments, roster, path_box) {
+    enrolled <- roster |>
+        dplyr::filter(enrolled == 1)
+    ids <- enrolled |> pull(netID)
+    box_folders <- enrolled |> pull(box_folder)
     for (i in 1:nrow(assignments)) {
         assign <- assignments$assign[i]
         for (j in 1:length(ids)) {
             id <- ids[j]
+            box_folder <- box_folders[j]
             report_path <- get_report_path(assign, id)
             if (file.exists(report_path)) {
                 print(paste0(assign, "-", id))
                 file.copy(
                     from = report_path,
-                    to = file.path(
-                        path_box, paste0(id, '-p4a'),
-                        basename(report_path)),
+                    to = file.path(path_box, box_folder, basename(report_path)),
                     overwrite = TRUE
                 )
             }
