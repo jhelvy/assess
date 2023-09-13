@@ -8,7 +8,7 @@ save_grades <- function(pars) {
 
     get_grades(pars) |>
         dplyr::distinct(name, netID, grade) |>
-        write_csv(here::here(
+        readr::write_csv(here::here(
             "assignments", pars$assign, "grades.csv"))
 }
 
@@ -28,7 +28,7 @@ get_grades <- function(pars, roster) {
         dplyr::mutate(question = as.character(question)) |>
         dplyr::left_join(pars$weights, by = 'question') |>
         dplyr::filter(!is.na(weight)) |>
-        rename(score = assessment)
+        dplyr::rename(score = assessment)
     bonus <- scores |>
         dplyr::filter(str_detect(question, 'bonus'))
     grades <- scores |>
@@ -95,7 +95,7 @@ get_all_grades <- function(assignments, roster) {
     for (i in 1:nrow(assignments)) {
         row <- assignments[i,]
         if (file.exists(row$path)) {
-            temp <- suppressMessages(read_csv(row$path))
+            temp <- suppressMessages(readr::read_csv(row$path))
             temp$missing <- NULL
             temp$name <- NULL
         } else {
@@ -118,7 +118,7 @@ get_all_grades <- function(assignments, roster) {
 #' @param x Grade
 #' @export
 getLetter <- function(x) {
-    scale <- tribble(
+    scale <- tibble::tribble(
         ~letter, ~bound,
         'A',  0.94,
         'A-', 0.90,
@@ -226,7 +226,7 @@ save_final_grades <- function(
             grade_max = round(grade_max, 3)
         ) |>
         dplyr::arrange(dplyr::desc(grade))
-    write_csv(result, file)
+    readr::write_csv(result, file)
 }
 
 drop_lowest <- function(df, cat, number, assignments) {

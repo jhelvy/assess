@@ -94,7 +94,7 @@ update_grades <- function(
 
     netID <- category <- n <- grade <- weight <- score <- NULL
 
-    grades_final <- read_csv(here::here('grades', 'grades.csv'))
+    grades_final <- readr::read_csv(here::here('grades', 'grades.csv'))
     grades <- get_all_grades(assignments, roster)
 
     # Drop lowest assignments
@@ -130,7 +130,7 @@ update_grades <- function(
             dplyr::filter(netID == row$netID) |>
             dplyr::select(-netID) |>
             dplyr::mutate(score = round(score, 3))
-        write_csv(
+        readr::write_csv(
             temp_grades,
             file.path(path_box, row$box_folder, "grade_assignments.csv")
         )
@@ -145,6 +145,6 @@ update_grades <- function(
         temp_grade <- rbind(score, max)
         temp_grade$category <- c('Current:', 'Max possible:')
         temp_grade <- temp_grade |> dplyr::select(category, grade, letter)
-        write_csv(temp_grade, file.path(path_box, row$box_folder, "grade_course.csv"))
+        readr::write_csv(temp_grade, file.path(path_box, row$box_folder, "grade_course.csv"))
     }
 }
