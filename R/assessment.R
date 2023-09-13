@@ -28,3 +28,15 @@ make_assessment <- function(pars, roster) {
     readr::write_csv(result,
         here::here('assignments', pars$assign, 'assessment_temp.csv'))
 }
+
+#' Get assessment data frame
+#'
+#' @param pars List of parameters defining assignment
+#' @export
+get_assessment <- function(pars) {
+    assessment <- readxl::read_excel(
+        here::here('data', 'gradebook.xlsx'),
+        sheet = pars$assign
+    )
+    return(assessment)
+}

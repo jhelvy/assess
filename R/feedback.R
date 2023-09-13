@@ -24,6 +24,8 @@ make_reports <- function(pars, roster, template, indiv = NULL) {
 }
 
 build_report <- function(grades, pars, template, indiv) {
+    netID <- NULL
+
     df <- dplyr::filter(grades, netID == indiv)
     output_file <- get_report_path(pars$assign, indiv)
     params_temp <- list(
@@ -57,8 +59,8 @@ update_feedback <- function(assignments, roster, path_box) {
 
     enrolled <- roster |>
         dplyr::filter(enrolled == 1)
-    ids <- enrolled |> pull(netID)
-    box_folders <- enrolled |> pull(box_folder)
+    ids <- enrolled |> dplyr::pull(netID)
+    box_folders <- enrolled |> dplyr::pull(box_folder)
     for (i in 1:nrow(assignments)) {
         assign <- assignments$assign[i]
         for (j in 1:length(ids)) {
@@ -92,7 +94,7 @@ update_grades <- function(
         assignments, roster, path_box, drop = NULL)
 {
 
-    netID <- category <- n <- grade <- weight <- score <- NULL
+    netID <- category <- n <- grade <- weight <- score <- letter <- NULL
 
     grades_final <- readr::read_csv(here::here('grades', 'grades.csv'))
     grades <- get_all_grades(assignments, roster)
@@ -140,7 +142,7 @@ update_grades <- function(
             dplyr::filter(netID == row$netID) |>
             dplyr::select(-netID)
         score <- dplyr::select(temp, grade, letter)
-        max <- dplyr::select(temp, ends_with("max"))
+        max <- dplyr::select(temp, dplyr::ends_with("max"))
         names(max) <- names(score)
         temp_grade <- rbind(score, max)
         temp_grade$category <- c('Current:', 'Max possible:')

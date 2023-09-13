@@ -1,6 +1,6 @@
 Package: assess
 Title: Course Assignment Grader
-Version: 0.2.0
+Version: 0.3.0
 Maintainer: John Helveston <john.helveston@gmail.com>
 Authors@R: c(
     person(given   = "John",
@@ -29,7 +29,9 @@ Imports:
     pagedown,
     rmarkdown,
     readr,
+    readxl,
     stringr,
-    tibble
+    tibble,
+    zip
 URL: https://github.com/jhelvy/assess
 BugReports: https://github.com/jhelvy/assess/issues

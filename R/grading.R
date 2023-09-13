@@ -4,7 +4,7 @@
 #' @param pars Parameters defining assignment
 #' @export
 save_grades <- function(pars) {
-    netID <- grade <- NULL
+    netID <- grade <- name <- NULL
 
     get_grades(pars) |>
         dplyr::distinct(name, netID, grade) |>
@@ -18,7 +18,7 @@ save_grades <- function(pars) {
 #' @param roster Course roster data frame
 #' @export
 get_grades <- function(pars, roster) {
-    assessment <- question <- weight <- enrolled <- NULL
+    assessment <- question <- weight <- enrolled <- netID <- score <- NULL
 
     assessment <- get_assessment(pars)
     if (pars$weighted == FALSE) {
@@ -30,9 +30,9 @@ get_grades <- function(pars, roster) {
         dplyr::filter(!is.na(weight)) |>
         dplyr::rename(score = assessment)
     bonus <- scores |>
-        dplyr::filter(str_detect(question, 'bonus'))
+        dplyr::filter(stringr::str_detect(question, 'bonus'))
     grades <- scores |>
-        dplyr::filter(! str_detect(question, 'bonus')) |>
+        dplyr::filter(! stringr::str_detect(question, 'bonus')) |>
         dplyr::group_by(netID) |>
         dplyr::summarise(grade = stats::weighted.mean(score, weight)) |>
         add_bonus(bonus)
@@ -42,18 +42,6 @@ get_grades <- function(pars, roster) {
         dplyr::full_join(dplyr::select(roster, netID, enrolled), by = "netID") |>
         dplyr::filter(enrolled == 1)
     return(grades)
-}
-
-#' Get assessment data frame
-#'
-#' @param pars List of parameters defining assignment
-#' @export
-get_assessment <- function(pars) {
-    assessment <- read_excel(
-        here::here('data', 'gradebook.xlsx'),
-        sheet = pars$assign
-    )
-    return(assessment)
 }
 
 get_grades_unweighted <- function(assessment, pars) {
@@ -155,7 +143,7 @@ save_final_grades <- function(
     assignments, roster, drop = NULL, file = 'grades.csv'
 ) {
 
-    netID <- grade <- grade_max <- grade_category <- weight <- weight_max <- weight_fill <-  NULL
+    netID <- n <- category <- grade <- grade_max <- grade_category <- weight <- weight_max <- weight_fill <-  NULL
 
     grades <- get_all_grades(assignments, roster)
 

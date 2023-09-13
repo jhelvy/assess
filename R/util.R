@@ -29,7 +29,7 @@ save_raw <- function(text, path) {
 #' Defaults to `FALSE`.
 #' @export
 unzip_submissions <- function(pars, roster, junkpathsSetting = FALSE) {
-    enrolled <- gwid <- NULL
+    enrolled <- gwid <- netID <- NULL
 
     # Create unzipped submissions folder if it does't exist
     path <- here::here("assignments", pars$assign, "submissions")
