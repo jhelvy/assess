@@ -218,7 +218,7 @@ save_final_grades <- function(
 }
 
 drop_lowest <- function(df, cat, number, assignments) {
-    category <- cat <- netID <- is_cat <- grade <- number <- NULL
+    category <- netID <- is_cat <- grade <- NULL
 
     result <- df |>
         dplyr::mutate(is_cat = ifelse(category == cat, 1, 0)) |>
