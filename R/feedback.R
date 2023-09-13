@@ -127,7 +127,7 @@ update_grades <- function(
 
         # Write grades for each assignment
         temp_grades <- grades_report |>
-            filter(netID == row$netID) |>
+            dplyr::filter(netID == row$netID) |>
             dplyr::select(-netID) |>
             dplyr::mutate(score = round(score, 3))
         write_csv(
@@ -137,7 +137,7 @@ update_grades <- function(
 
         # Write running final grade
         temp <- grades_final |>
-            filter(netID == row$netID) |>
+            dplyr::filter(netID == row$netID) |>
             dplyr::select(-netID)
         score <- dplyr::select(temp, grade, letter)
         max <- dplyr::select(temp, ends_with("max"))

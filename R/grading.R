@@ -27,12 +27,12 @@ get_grades <- function(pars, roster) {
     scores <- assessment |>
         dplyr::mutate(question = as.character(question)) |>
         dplyr::left_join(pars$weights, by = 'question') |>
-        filter(!is.na(weight)) |>
+        dplyr::filter(!is.na(weight)) |>
         rename(score = assessment)
     bonus <- scores |>
-        filter(str_detect(question, 'bonus'))
+        dplyr::filter(str_detect(question, 'bonus'))
     grades <- scores |>
-        filter(! str_detect(question, 'bonus')) |>
+        dplyr::filter(! str_detect(question, 'bonus')) |>
         dplyr::group_by(netID) |>
         dplyr::summarise(grade = weighted.mean(score, weight)) |>
         add_bonus(bonus)
@@ -40,7 +40,7 @@ get_grades <- function(pars, roster) {
     grades <- scores |>
         dplyr::left_join(grades, by = 'netID') |>
         dplyr::full_join(dplyr::select(roster, netID, enrolled), by = "netID") |>
-        filter(enrolled == 1)
+        dplyr::filter(enrolled == 1)
     return(grades)
 }
 
