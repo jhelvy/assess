@@ -34,7 +34,7 @@ get_grades <- function(pars, roster) {
     grades <- scores |>
         dplyr::filter(! str_detect(question, 'bonus')) |>
         dplyr::group_by(netID) |>
-        dplyr::summarise(grade = weighted.mean(score, weight)) |>
+        dplyr::summarise(grade = stats::weighted.mean(score, weight)) |>
         add_bonus(bonus)
     grades$score <- NULL
     grades <- scores |>
