@@ -4,6 +4,7 @@
 #' @param roster Course roster data frame
 #' @export
 make_assessment <- function(pars, roster) {
+    enrolled <- netID <- name <- order <- question <- assessment <- feedback <- NULL
 
     result <- roster |>
         dplyr::filter(enrolled == 1) |>

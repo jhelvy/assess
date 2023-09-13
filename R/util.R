@@ -29,6 +29,7 @@ save_raw <- function(text, path) {
 #' Defaults to `FALSE`.
 #' @export
 unzip_submissions <- function(pars, roster, junkpathsSetting = FALSE) {
+    enrolled <- gwid <- NULL
 
     # Create unzipped submissions folder if it does't exist
     path <- here::here("assignments", pars$assign, "submissions")
@@ -60,6 +61,8 @@ unzip_submissions <- function(pars, roster, junkpathsSetting = FALSE) {
 }
 
 get_enrolled_ids <- function(roster) {
+    enrolled <- netID <- NULL
+
     result <- roster |>
         dplyr::filter(enrolled == 1) |>
         dplyr::pull(netID)

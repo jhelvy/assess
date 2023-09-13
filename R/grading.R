@@ -4,6 +4,8 @@
 #' @param pars Parameters defining assignment
 #' @export
 save_grades <- function(pars) {
+    netID <- grade <- NULL
+
     get_grades(pars) |>
         distinct(name, netID, grade) |>
         write_csv(here::here(
@@ -16,6 +18,8 @@ save_grades <- function(pars) {
 #' @param roster Course roster data frame
 #' @export
 get_grades <- function(pars, roster) {
+    assessment <- question <- weight <- enrolled <- NULL
+
     assessment <- get_assessment(pars)
     if (pars$weighted == FALSE) {
         return(get_grades_unweighted(assessment, pars))
@@ -53,6 +57,8 @@ get_assessment <- function(pars) {
 }
 
 get_grades_unweighted <- function(assessment, pars) {
+    netID <- NULL
+
     grades <- assessment |>
         group_by(netID) |>
         mutate(grade = sum(assessment) / pars$maxScore)
@@ -60,6 +66,8 @@ get_grades_unweighted <- function(assessment, pars) {
 }
 
 add_bonus <- function(df, bonus) {
+    score <- weight <- netID <- grade <- NULL
+
     if (nrow(bonus) == 0) { return(df) }
     result <- bonus |>
         mutate(score = ifelse(score == 1, weight, 0)) |>
@@ -79,6 +87,8 @@ add_bonus <- function(df, bonus) {
 #' @param roster Course roster data frame
 #' @export
 get_all_grades <- function(assignments, roster) {
+    netID <- order <- NULL
+
     ids <- get_enrolled_ids(roster)
     missing_grades <- data.frame(netID = ids, grade = NA)
     grades <- list()
@@ -144,6 +154,9 @@ getLetter <- function(x) {
 save_final_grades <- function(
     assignments, roster, drop = NULL, file = 'grades.csv'
 ) {
+
+    netID <- grade <- grade_max <- grade_category <- weight <- weight_max <- weight_fill <-  NULL
+
     grades <- get_all_grades(assignments, roster)
 
     # Drop lowest assignments
@@ -217,6 +230,8 @@ save_final_grades <- function(
 }
 
 drop_lowest <- function(df, cat, number, assignments) {
+    category <- cat <- netID <- is_cat <- grade <- number <- NULL
+
     result <- df |>
         mutate(is_cat = ifelse(category == cat, 1, 0)) |>
         arrange(netID, desc(is_cat), grade) |>

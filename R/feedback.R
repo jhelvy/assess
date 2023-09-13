@@ -53,6 +53,8 @@ get_report_path <- function(assign, indiv = NULL) {
 #' @param path_box Path to root box folder
 #' @export
 update_feedback <- function(assignments, roster, path_box) {
+    netID <- box_folder <- NULL
+
     enrolled <- roster |>
         dplyr::filter(enrolled == 1)
     ids <- enrolled |> pull(netID)
@@ -89,6 +91,9 @@ update_feedback <- function(assignments, roster, path_box) {
 update_grades <- function(
         assignments, roster, path_box, drop = NULL)
 {
+
+    netID <- category <- n <- grade <- weight <- score <- NULL
+
     grades_final <- read_csv(here::here('grades', 'grades.csv'))
     grades <- get_all_grades(assignments, roster)
 
