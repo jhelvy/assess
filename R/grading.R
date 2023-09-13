@@ -7,7 +7,7 @@ save_grades <- function(pars) {
     netID <- grade <- NULL
 
     get_grades(pars) |>
-        distinct(name, netID, grade) |>
+        dplyr::distinct(name, netID, grade) |>
         write_csv(here::here(
             "assignments", pars$assign, "grades.csv"))
 }
@@ -25,21 +25,21 @@ get_grades <- function(pars, roster) {
         return(get_grades_unweighted(assessment, pars))
     }
     scores <- assessment |>
-        mutate(question = as.character(question)) |>
-        left_join(pars$weights, by = 'question') |>
+        dplyr::mutate(question = as.character(question)) |>
+        dplyr::left_join(pars$weights, by = 'question') |>
         filter(!is.na(weight)) |>
         rename(score = assessment)
     bonus <- scores |>
         filter(str_detect(question, 'bonus'))
     grades <- scores |>
         filter(! str_detect(question, 'bonus')) |>
-        group_by(netID) |>
-        summarise(grade = weighted.mean(score, weight)) |>
+        dplyr::group_by(netID) |>
+        dplyr::summarise(grade = weighted.mean(score, weight)) |>
         add_bonus(bonus)
     grades$score <- NULL
     grades <- scores |>
-        left_join(grades, by = 'netID') |>
-        full_join(select(roster, netID, enrolled), by = "netID") |>
+        dplyr::left_join(grades, by = 'netID') |>
+        dplyr::full_join(dplyr::select(roster, netID, enrolled), by = "netID") |>
         filter(enrolled == 1)
     return(grades)
 }
@@ -60,8 +60,8 @@ get_grades_unweighted <- function(assessment, pars) {
     netID <- NULL
 
     grades <- assessment |>
-        group_by(netID) |>
-        mutate(grade = sum(assessment) / pars$maxScore)
+        dplyr::group_by(netID) |>
+        dplyr::mutate(grade = sum(assessment) / pars$maxScore)
     return(grades)
 }
 
@@ -70,12 +70,12 @@ add_bonus <- function(df, bonus) {
 
     if (nrow(bonus) == 0) { return(df) }
     result <- bonus |>
-        mutate(score = ifelse(score == 1, weight, 0)) |>
-        select(netID, score) |>
-        group_by(netID) |>
-        summarise(score = sum(score)) |>
-        right_join(df, by = 'netID') |>
-        mutate(grade = grade + score)
+        dplyr::mutate(score = ifelse(score == 1, weight, 0)) |>
+        dplyr::select(netID, score) |>
+        dplyr::group_by(netID) |>
+        dplyr::summarise(score = sum(score)) |>
+        dplyr::right_join(df, by = 'netID') |>
+        dplyr::mutate(grade = grade + score)
     return(result)
 }
 
@@ -109,7 +109,7 @@ get_all_grades <- function(assignments, roster) {
     }
     # Merge
     grades <- do.call(rbind, grades) |>
-        arrange(netID, order)
+        dplyr::arrange(netID, order)
     return(grades)
 }
 
@@ -163,15 +163,15 @@ save_final_grades <- function(
     if (!is.null(drop)) {
         for (i in 1:length(drop)) {
             grades <- grades |>
-                group_by(netID) |>
+                dplyr::group_by(netID) |>
                 drop_lowest(names(drop[i]), drop[i], assignments)
         }
     }
 
     # Compute grade for each category
     result <- grades |>
-        group_by(netID, category) |>
-        mutate(
+        dplyr::group_by(netID, category) |>
+        dplyr::mutate(
             grade_category = mean(grade, na.rm = TRUE),
             # If no grade yet in category, replace with NA
             grade_category = ifelse(is.nan(grade_category), NA, grade_category)
@@ -188,44 +188,44 @@ save_final_grades <- function(
 
     # Set the weight by assignment
     result <- result |>
-        group_by(netID, category) |>
-        mutate(weight = weight / n())
+        dplyr::group_by(netID, category) |>
+        dplyr::mutate(weight = weight / n())
     result$weight_max <- result$weight
 
     # If any grades are still missing, then distribute their weight
     # across the other categories
     temp <- result |>
-        mutate(weight_fill = ifelse(is.na(grade), weight, 0)) |>
-        group_by(netID) |>
-        summarise(weight_fill = sum(weight_fill))
+        dplyr::mutate(weight_fill = ifelse(is.na(grade), weight, 0)) |>
+        dplyr::group_by(netID) |>
+        dplyr::summarise(weight_fill = sum(weight_fill))
     result <- result |>
-        left_join(temp, by = 'netID') |>
-        group_by(netID) |>
-        mutate(
+        dplyr::left_join(temp, by = 'netID') |>
+        dplyr::group_by(netID) |>
+        dplyr::mutate(
             missing = is.na(grade),
             grade = ifelse(missing, 0, grade),
             weight = ifelse(missing, 0, weight),
             weight_fill = ifelse(missing, 0, weight_fill)
         ) |>
-        group_by(netID, missing) |>
-        mutate(weight = weight + (weight_fill / n()))
+        dplyr::group_by(netID, missing) |>
+        dplyr::mutate(weight = weight + (weight_fill / n()))
 
     # Compute grades
 
     result <- result |>
-        group_by(netID) |>
-        summarise(
+        dplyr::group_by(netID) |>
+        dplyr::summarise(
             grade = sum(weight*grade),
             grade_max = sum(weight_max*grade_max)
         ) |>
-        mutate(
+        dplyr::mutate(
             grade_max = ifelse(grade > grade_max, grade, grade_max),
             letter = getLetter(grade),
             grade = round(grade, 3),
             letter_max = getLetter(grade_max),
             grade_max = round(grade_max, 3)
         ) |>
-        arrange(desc(grade))
+        dplyr::arrange(dplyr::desc(grade))
     write_csv(result, file)
 }
 
@@ -233,9 +233,9 @@ drop_lowest <- function(df, cat, number, assignments) {
     category <- cat <- netID <- is_cat <- grade <- number <- NULL
 
     result <- df |>
-        mutate(is_cat = ifelse(category == cat, 1, 0)) |>
-        arrange(netID, desc(is_cat), grade) |>
-        slice(-(1:number)) |>
-        select(-is_cat)
+        dplyr::mutate(is_cat = ifelse(category == cat, 1, 0)) |>
+        dplyr::arrange(netID, dplyr::desc(is_cat), grade) |>
+        dplyr::slice(-(1:number)) |>
+        dplyr::select(-is_cat)
     return(result)
 }

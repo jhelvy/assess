@@ -102,24 +102,24 @@ update_grades <- function(
         drop_df <- as.data.frame(drop)
         drop_df$name <- row.names(drop_df)
         cat_count <- grades |>
-            count(netID, category) |>
-            left_join(drop_df, by = c("category" = "name")) |>
-            mutate(
+            dplyr::count(netID, category) |>
+            dplyr::left_join(drop_df, by = c("category" = "name")) |>
+            dplyr::mutate(
                 drop = ifelse(is.na(drop), 0, drop),
                 n = n - drop
             ) |>
-            distinct(category, n)
+            dplyr::distinct(category, n)
     } else {
         cat_count <- grades |>
-            count(netID, category) |>
-            distinct(category, n)
+            dplyr::count(netID, category) |>
+            dplyr::distinct(category, n)
     }
 
     grades_report <- grades |>
-        left_join(cat_count, by = 'category') |>
-        mutate(weight = weight / n) |>
-        select(netID, assignment = assign, score = grade, weight) |>
-        mutate(weight = round(weight, 3))
+        dplyr::left_join(cat_count, by = 'category') |>
+        dplyr::mutate(weight = weight / n) |>
+        dplyr::select(netID, assignment = assign, score = grade, weight) |>
+        dplyr::mutate(weight = round(weight, 3))
 
     for (i in 1:nrow(roster)) {
         row <- roster[i,]
@@ -128,8 +128,8 @@ update_grades <- function(
         # Write grades for each assignment
         temp_grades <- grades_report |>
             filter(netID == row$netID) |>
-            select(-netID) |>
-            mutate(score = round(score, 3))
+            dplyr::select(-netID) |>
+            dplyr::mutate(score = round(score, 3))
         write_csv(
             temp_grades,
             file.path(path_box, row$box_folder, "grade_assignments.csv")
@@ -138,13 +138,13 @@ update_grades <- function(
         # Write running final grade
         temp <- grades_final |>
             filter(netID == row$netID) |>
-            select(-netID)
-        score <- select(temp, grade, letter)
-        max <- select(temp, ends_with("max"))
+            dplyr::select(-netID)
+        score <- dplyr::select(temp, grade, letter)
+        max <- dplyr::select(temp, ends_with("max"))
         names(max) <- names(score)
         temp_grade <- rbind(score, max)
         temp_grade$category <- c('Current:', 'Max possible:')
-        temp_grade <- temp_grade |> select(category, grade, letter)
+        temp_grade <- temp_grade |> dplyr::select(category, grade, letter)
         write_csv(temp_grade, file.path(path_box, row$box_folder, "grade_course.csv"))
     }
 }
