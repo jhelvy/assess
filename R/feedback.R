@@ -49,10 +49,8 @@ get_report_path <- function(assign, indiv = NULL) {
 #' Update feedback for all assignments in Box folders
 #'
 #' @param assignments Assignments data frame
-#' @param path_box Path to root box folder
 #' @param roster Course roster data frame
-#' @param indiv One specific id (to build just one report instead of all)
-#' Defaults to `NULL` in which case reports are made for all students.
+#' @param path_box Path to root box folder
 #' @export
 update_feedback <- function(assignments, roster, path_box) {
     enrolled <- roster |>
@@ -65,14 +63,83 @@ update_feedback <- function(assignments, roster, path_box) {
             id <- ids[j]
             box_folder <- box_folders[j]
             report_path <- get_report_path(assign, id)
+            dest_path <- file.path(path_box, box_folder, basename(report_path))
             if (file.exists(report_path)) {
                 print(paste0(assign, "-", id))
                 file.copy(
                     from = report_path,
-                    to = file.path(path_box, box_folder, basename(report_path)),
+                    to = dest_path,
                     overwrite = TRUE
                 )
             }
         }
+    }
+}
+
+#' Update grades for all assignments
+#'
+#' Update grades for all assignments in Box folders
+#'
+#' @param assignments Assignments data frame
+#' @param roster Course roster data frame
+#' @param path_box Path to root box folder
+#' @param drop Which assignments to drop from grade computation. Should be a
+#' named vector defining the category and number to drop.
+#' @export
+update_grades <- function(
+        assignments, roster, path_box, drop = NULL)
+{
+    grades_final <- read_csv(here::here('grades', 'grades.csv'))
+    grades <- get_all_grades(assignments, roster)
+
+    # Drop lowest assignments
+    if (!is.null(drop)) {
+        drop_df <- as.data.frame(drop)
+        drop_df$name <- row.names(drop_df)
+        cat_count <- grades %>%
+            count(netID, category) %>%
+            left_join(drop_df, by = c("category" = "name")) %>%
+            mutate(
+                drop = ifelse(is.na(drop), 0, drop),
+                n = n - drop
+            ) %>%
+            distinct(category, n)
+    } else {
+        cat_count <- grades %>%
+            count(netID, category) %>%
+            distinct(category, n)
+    }
+
+    grades_report <- grades %>%
+        left_join(cat_count, by = 'category') %>%
+        mutate(weight = weight / n) %>%
+        select(netID, assignment = assign, score = grade, weight) %>%
+        mutate(weight = round(weight, 3))
+
+    for (i in 1:nrow(roster)) {
+        row <- roster[i,]
+        if (row$enrolled == 0) { next }
+
+        # Write grades for each assignment
+        temp_grades <- grades_report %>%
+            filter(netID == row$netID) %>%
+            select(-netID) %>%
+            mutate(score = round(score, 3))
+        write_csv(
+            temp_grades,
+            file.path(path_box, row$box_folder, "grade_assignments.csv")
+        )
+
+        # Write running final grade
+        temp <- grades_final %>%
+            filter(netID == row$netID) %>%
+            select(-netID)
+        score <- select(temp, grade, letter)
+        max <- select(temp, ends_with("max"))
+        names(max) <- names(score)
+        temp_grade <- rbind(score, max)
+        temp_grade$category <- c('Current:', 'Max possible:')
+        temp_grade <- temp_grade %>% select(category, grade, letter)
+        write_csv(temp_grade, file.path(path_box, row$box_folder, "grade_course.csv"))
     }
 }

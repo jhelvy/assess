@@ -16,8 +16,7 @@ save_grades <- function(pars) {
 #' @param roster Course roster data frame
 #' @export
 get_grades <- function(pars, roster) {
-    path <- here::here("assignments", pars$assign, "assessment.csv")
-    assessment <- read_csv(path)
+    assessment <- get_assessment(pars)
     if (pars$weighted == FALSE) {
         return(get_grades_unweighted(assessment, pars))
     }
@@ -41,6 +40,18 @@ get_grades <- function(pars, roster) {
     return(grades)
 }
 
+#' Get assessment data frame
+#'
+#' @param pars List of parameters defining assignment
+#' @export
+get_assessment <- function(pars) {
+    assessment <- read_excel(
+        here::here('data', 'gradebook.xlsx'),
+        sheet = pars$assign
+    )
+    return(assessment)
+}
+
 get_grades_unweighted <- function(assessment, pars) {
     grades <- assessment %>%
         group_by(netID) %>%
@@ -60,13 +71,12 @@ add_bonus <- function(df, bonus) {
     return(result)
 }
 
-#' Title
+#' Get all grades data frame
 #'
-#' Description
+#' Data frame of all assignments
 #'
 #' @param assignments Data frame of all assignments
 #' @param roster Course roster data frame
-#' @param amg Include an Alternative Minimum Grade (AMG) grade?
 #' @export
 get_all_grades <- function(assignments, roster) {
     ids <- get_enrolled_ids(roster)
@@ -84,7 +94,6 @@ get_all_grades <- function(assignments, roster) {
         temp$category <- row$category
         temp$assign <- row$assign
         temp$weight <- row$weight
-        temp$weight_amg = row$weight_amg
         temp$order <- row$order
         grades[[i]] <- temp
     }
@@ -94,6 +103,10 @@ get_all_grades <- function(assignments, roster) {
     return(grades)
 }
 
+#' Get letter grade from grade
+#'
+#' @param x Grade
+#' @export
 getLetter <- function(x) {
     scale <- tribble(
         ~letter, ~bound,
@@ -118,16 +131,18 @@ getLetter <- function(x) {
     return(letters)
 }
 
-#' Title
+#' Save final grades to csv
 #'
-#' Description
+#' Saves final grades to a csv file located at `file`
 #'
-#' @param grades Data frame of all grades for each item
+#' @param assignments Data frame of all assignments
+#' @param roster Course roster data frame
 #' @param drop Which assignments to drop from grade computation. Should be a
 #' named vector defining the category and number to drop.
+#' @param file File name where to save grades as csv
 #' @export
 save_final_grades <- function(
-    assignments, roster, weights, drop = NULL, file = 'grades.csv'
+    assignments, roster, drop = NULL, file = 'grades.csv'
 ) {
     grades <- get_all_grades(assignments, roster)
 
@@ -158,8 +173,7 @@ save_final_grades <- function(
     result$grade_max <- result$grade
     result[missing,]$grade_max <- 1
 
-    # Set the weights to use
-    result$weight <- pull(result[weights])
+    # Set the weight by assignment
     result <- result %>%
         group_by(netID, category) %>%
         mutate(weight = weight / n())
@@ -209,44 +223,4 @@ drop_lowest <- function(df, cat, number, assignments) {
         slice(-(1:number)) %>%
         select(-is_cat)
     return(result)
-}
-
-update_grades <- function(assignments, roster, path_box) {
-    grades_final <- read_csv(here::here('grades', 'grades.csv'))
-    grades <- get_all_grades(assignments, roster)
-
-    grades_report <- grades %>%
-        group_by(netID, category) %>%
-        mutate(weight = weight / n()) %>%
-        select(netID, assignment = assign, score = grade, weight) %>%
-        mutate(weight = round(weight, 3))
-
-    for (i in 1:nrow(roster)) {
-        row <- roster[i,]
-        if (row$enrolled == 0) { next }
-
-        # Write grades for each assignment
-        temp_grades <- grades_report %>%
-            filter(netID == row$netID) %>%
-            select(-netID) %>%
-            mutate(score = round(score, 3))
-        write_csv(
-            temp_grades,
-            file.path(path_box, row$box, "grade_assignments.csv")
-        )
-
-        # Write running final grade
-        temp <- grades_final %>%
-            filter(netID == row$netID) %>%
-            select(-netID)
-        score <- select(temp, grade, letter)
-        amg <- select(temp, ends_with("amg"))
-        max <- select(temp, ends_with("max"))
-        names(amg) <- names(score)
-        names(max) <- names(score)
-        temp_grade <- rbind(score, amg, max)
-        temp_grade$category <- c('Current:', 'AMG:', 'Max possible:')
-        temp_grade <- temp_grade %>% select(category, grade, letter)
-        write_csv(temp_grade, file.path(path_box, row$box, "grade_course.csv"))
-    }
 }
