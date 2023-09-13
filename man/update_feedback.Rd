@@ -4,7 +4,7 @@
 \alias{update_feedback}
 \title{Update feedback for all assignments}
 \usage{
-update_feedback(assignments, roster, path_box, indiv = NULL)
+update_feedback(assignments, roster, path_box)
 }
 \arguments{
 \item{assignments}{Assignments data frame}
@@ -12,9 +12,6 @@ update_feedback(assignments, roster, path_box, indiv = NULL)
 \item{roster}{Course roster data frame}
 
 \item{path_box}{Path to root box folder}
-
-\item{indiv}{One specific id (to build just one report instead of all)
-Defaults to \code{NULL} in which case reports are made for all students.}
 }
 \description{
 Update feedback for all assignments in Box folders

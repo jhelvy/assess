@@ -2,13 +2,13 @@
 % Please edit documentation in R/grading.R
 \name{getLetter}
 \alias{getLetter}
-\title{Convert numeric grade to letter}
+\title{Get letter grade from grade}
 \usage{
 getLetter(x)
 }
 \arguments{
-\item{x}{Numeric grade, 0 to 1.}
+\item{x}{Grade}
 }
 \description{
-Convert numeric grade to letter
+Get letter grade from grade
 }

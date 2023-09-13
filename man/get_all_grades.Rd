@@ -2,7 +2,7 @@
 % Please edit documentation in R/grading.R
 \name{get_all_grades}
 \alias{get_all_grades}
-\title{Get grades for all assignments}
+\title{Get all grades data frame}
 \usage{
 get_all_grades(assignments, roster)
 }
@@ -10,9 +10,7 @@ get_all_grades(assignments, roster)
 \item{assignments}{Data frame of all assignments}
 
 \item{roster}{Course roster data frame}
-
-\item{amg}{Include an Alternative Minimum Grade (AMG) grade?}
 }
 \description{
-Get grades for all assignments
+Data frame of all assignments
 }

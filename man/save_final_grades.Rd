@@ -2,28 +2,20 @@
 % Please edit documentation in R/grading.R
 \name{save_final_grades}
 \alias{save_final_grades}
-\title{Save final grades}
+\title{Save final grades to csv}
 \usage{
-save_final_grades(
-  assignments,
-  roster,
-  weights,
-  drop = NULL,
-  file = "grades.csv"
-)
+save_final_grades(assignments, roster, drop = NULL, file = "grades.csv")
 }
 \arguments{
 \item{assignments}{Data frame of all assignments}
 
 \item{roster}{Course roster data frame}
 
-\item{weights}{Column name defining weights to use in computing grade.}
-
 \item{drop}{Which assignments to drop from grade computation. Should be a
 named vector defining the category and number to drop.}
 
-\item{file}{Name of file to save. Defaults to \code{'grades.csv'}.}
+\item{file}{File name where to save grades as csv}
 }
 \description{
-Writes final grades to disc as grades.csv
+Saves final grades to a csv file located at \code{file}
 }
