@@ -29,14 +29,25 @@ make_assessment <- function(pars, roster) {
         here::here('assignments', pars$assign, 'assessment_temp.csv'))
 }
 
-#' Get assessment data frame
+#' Get saved assessment data frame
 #'
 #' @param pars List of parameters defining assignment
 #' @export
 get_assessment <- function(pars) {
+    path <- here::here("assignments", pars$assign, "assessment.csv")
+    return(readr::read_csv(path))
+}
+
+#' Get assessment data frame from gradebook
+#'
+#' @param pars List of parameters defining assignment
+#' @export
+get_gradebook <- function(pars) {
     assessment <- readxl::read_excel(
         here::here('data', 'gradebook.xlsx'),
         sheet = pars$assign
     )
     return(assessment)
 }
+
+

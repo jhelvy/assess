@@ -3,6 +3,7 @@
 export(getLetter)
 export(get_all_grades)
 export(get_assessment)
+export(get_gradebook)
 export(get_grades)
 export(make_assessment)
 export(make_dir)
