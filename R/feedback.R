@@ -10,7 +10,7 @@ make_reports <- function(pars, roster, template, indiv = NULL) {
     # Create feedback folder (if doesn't exist)
     make_dir(here::here('assignments', pars$assign, 'feedback'))
     # Get grades
-    grades <- get_grades(pars)
+    grades <- get_grades(pars, roster)
     if (!is.null(indiv)) {
         # Build only the one report for the provided netID
         build_report(grades, pars, template, indiv)

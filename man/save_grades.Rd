@@ -4,7 +4,7 @@
 \alias{save_grades}
 \title{Save all grades to file}
 \usage{
-save_grades(pars)
+save_grades(pars, roster)
 }
 \arguments{
 \item{pars}{Parameters defining assignment}

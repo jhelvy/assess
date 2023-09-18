@@ -3,10 +3,10 @@
 #'
 #' @param pars Parameters defining assignment
 #' @export
-save_grades <- function(pars) {
+save_grades <- function(pars, roster) {
     netID <- grade <- name <- NULL
 
-    get_grades(pars) |>
+    get_grades(pars, roster) |>
         dplyr::distinct(name, netID, grade) |>
         readr::write_csv(here::here(
             "assignments", pars$assign, "grades.csv"))
