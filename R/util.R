@@ -88,3 +88,30 @@ import_file <- function(file, destination, junkpathsSetting) {
     }
 
 }
+
+
+#' Return data frame of folder sizes
+#'
+#' @param pars List of features defining an assignment
+#' @param roster Class roster (data frame)
+#' @export
+get_folder_sizes <- function(pars, roster) {
+    results <- roster %>%
+        filter(enrolled == 1) %>%
+        select(netID) %>%
+        arrange(netID) %>%
+        mutate(size = NA)
+    for (i in seq(nrow(results))) {
+        files <- list.files(
+            here::here('assignments', pars$assign, 'unzipped', results$netID[i]),
+            full.names = TRUE,
+            recursive = TRUE
+        )
+        if (length(files) > 0) {
+            vect_size <- sapply(files, file.size)
+            size_mb <- round(sum(vect_size) / 10^6, 2)
+            results$size[i] <- size_mb
+        }
+    }
+    return(data.frame(results))
+}
