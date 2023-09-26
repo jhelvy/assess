@@ -24,7 +24,7 @@ get_grades <- function(pars, roster) {
     if (is.null(pars$weights)) {
         return(get_grades_unweighted(assessment, pars))
     }
-    maxScore <- sum(pars$we$weight)
+    maxScore <- sum(pars$weights$weight)
     scores <- assessment |>
         dplyr::mutate(question = as.character(question)) |>
         dplyr::left_join(pars$weights, by = 'question') |>
