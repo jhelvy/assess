@@ -161,43 +161,21 @@ save_final_grades <- function(
     result <- grades |>
         dplyr::group_by(netID, category) |>
         dplyr::mutate(
-            grade_category = mean(grade, na.rm = TRUE),
-            # If no grade yet in category, replace with NA
-            grade_category = ifelse(is.nan(grade_category), NA, grade_category)
-        )
-
-    # Insert mean category grade for missing assignments
-    # (those not yet graded)
-    missing <- which(is.na(result$grade))
-    result[missing,]$grade <- result[missing,]$grade_category
-
-    # For max score, insert 1 for missing assignments
-    result$grade_max <- result$grade
-    result[missing,]$grade_max <- 1
-
-    # Set the weight by assignment
-    result <- result |>
-        dplyr::group_by(netID, category) |>
-        dplyr::mutate(weight = weight / n())
-    result$weight_max <- result$weight
-
-    # If any grades are still missing, then distribute their weight
-    # across the other categories
-    temp <- result |>
-        dplyr::mutate(weight_fill = ifelse(is.na(grade), weight, 0)) |>
-        dplyr::group_by(netID) |>
-        dplyr::summarise(weight_fill = sum(weight_fill))
-    result <- result |>
-        dplyr::left_join(temp, by = 'netID') |>
+            # Store which grades are missing
+            missing = is.na(grade),
+            # Set the weight by assignment
+            weight = weight / n(),
+            grade = ifelse(missing, 0, grade),
+            grade_max = ifelse(missing, 1, grade)
+        ) |>
+        # If any grades are still missing, distribute their weight
+        # proportionally across the other categories that aren't missing
         dplyr::group_by(netID) |>
         dplyr::mutate(
-            missing = is.na(grade),
-            grade = ifelse(missing, 0, grade),
+            weight_max = weight,
             weight = ifelse(missing, 0, weight),
-            weight_fill = ifelse(missing, 0, weight_fill)
-        ) |>
-        dplyr::group_by(netID, missing) |>
-        dplyr::mutate(weight = weight + (weight_fill / n()))
+            weight = weight / sum(weight)
+        )
 
     # Compute grades
 
