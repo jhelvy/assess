@@ -22,7 +22,7 @@ get_grades <- function(pars, roster) {
 
     assessment <- get_assessment(pars)
     maxScore <- pars$weights |>
-        dplyr::filter(! stringr::str_detect(question, 'bonus')) |>
+        dplyr::filter(! is_bonus(question)) |>
         dplyr::pull(weight) |>
         sum()
     scores <- assessment |>
@@ -31,9 +31,9 @@ get_grades <- function(pars, roster) {
         dplyr::filter(!is.na(weight)) |>
         dplyr::rename(score = assessment)
     bonus <- scores |>
-        dplyr::filter(stringr::str_detect(question, 'bonus'))
+        dplyr::filter(is_bonus(question))
     grades <- scores |>
-        dplyr::filter(! stringr::str_detect(question, 'bonus')) |>
+        dplyr::filter(! is_bonus(question)) |>
         dplyr::group_by(netID) |>
         dplyr::summarise(score = sum(score)) |>
         add_bonus(bonus) |>
@@ -45,6 +45,10 @@ get_grades <- function(pars, roster) {
         dplyr::full_join(dplyr::select(roster, netID, enrolled), by = "netID") |>
         dplyr::filter(enrolled == 1)
     return(grades)
+}
+
+is_bonus <- function(question) {
+    return(stringr::str_detect(stringr::str_to_lower(question), 'bonus'))
 }
 
 add_bonus <- function(df, bonus) {
