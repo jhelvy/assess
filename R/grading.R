@@ -21,6 +21,9 @@ get_grades <- function(pars, roster) {
     assessment <- question <- weight <- enrolled <- netID <- score <- NULL
 
     assessment <- get_assessment(pars)
+    if (is.null(pars$weights)) {
+        return(get_grades_unweighted(assessment, pars))
+    }
     maxScore <- pars$weights |>
         dplyr::filter(! is_bonus(question)) |>
         dplyr::pull(weight) |>
@@ -44,6 +47,15 @@ get_grades <- function(pars, roster) {
         dplyr::left_join(grades, by = 'netID') |>
         dplyr::full_join(dplyr::select(roster, netID, enrolled), by = "netID") |>
         dplyr::filter(enrolled == 1)
+    return(grades)
+}
+
+get_grades_unweighted <- function(assessment, pars) {
+    netID <- NULL
+
+    grades <- assessment |>
+        dplyr::group_by(netID) |>
+        dplyr::mutate(grade = sum(assessment) / pars$maxScore)
     return(grades)
 }
 
