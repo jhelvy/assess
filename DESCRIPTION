@@ -1,6 +1,6 @@
 Package: assess
 Title: Course Assignment Grader
-Version: 0.3.3
+Version: 0.4.0
 Maintainer: John Helveston <john.helveston@gmail.com>
 Authors@R: c(
     person(given   = "John",
@@ -25,6 +25,7 @@ Suggests:
 Imports:
     dplyr,
     fs,
+    googlesheets4,
     here,
     pagedown,
     rmarkdown,

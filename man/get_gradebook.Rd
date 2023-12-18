@@ -4,10 +4,12 @@
 \alias{get_gradebook}
 \title{Get assessment data frame from gradebook}
 \usage{
-get_gradebook(pars)
+get_gradebook(pars, url)
 }
 \arguments{
 \item{pars}{List of parameters defining assignment}
+
+\item{url}{url to google sheet}
 }
 \description{
 Get assessment data frame from gradebook

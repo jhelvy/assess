@@ -41,13 +41,10 @@ get_assessment <- function(pars) {
 #' Get assessment data frame from gradebook
 #'
 #' @param pars List of parameters defining assignment
+#' @param url url to google sheet
 #' @export
-get_gradebook <- function(pars) {
-    assessment <- readxl::read_excel(
-        here::here('data', 'gradebook.xlsx'),
-        sheet = pars$assign
-    )
-    return(assessment)
+get_gradebook <- function(pars, url) {
+    return(googlesheets4::read_sheet(ss = url, sheet = pars$assign))
 }
 
 
