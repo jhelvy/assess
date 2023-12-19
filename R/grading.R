@@ -151,7 +151,7 @@ getLetter <- function(x) {
 #' @param file File name where to save grades as csv
 #' @export
 save_final_grades <- function(
-    assignments, roster, drop = NULL, bonus = NULL, file = 'grades.csv'
+    assignments, roster, drop = NULL, file = 'grades.csv'
 ) {
 
     netID <- n <- category <- grade <- grade_max <- grade_category <- weight <- weight_max <- weight_fill <-  NULL
@@ -188,16 +188,14 @@ save_final_grades <- function(
         )
 
     # Compute grades
-    bonus <- ifelse(is.null(bonus), 0, bonus)
 
-    temp <- result |>
+    result <- result |>
         dplyr::group_by(netID) |>
         dplyr::summarise(
             grade = sum(weight*grade),
             grade_max = sum(weight_max*grade_max)
         ) |>
         dplyr::mutate(
-            grade = grade + bonus,
             grade_max = ifelse(grade > grade_max, grade, grade_max),
             letter = getLetter(grade),
             grade = round(grade, 3),
