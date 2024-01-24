@@ -3,7 +3,8 @@
 #' @param pars Parameters defining assignment
 #' @param roster Course roster data frame
 #' @export
-make_assessment <- function(pars, roster) {
+make_blank_assessment <- function(pars, roster) {
+
     enrolled <- netID <- name <- order <- question <- assessment <- feedback <- NULL
 
     result <- roster |>
@@ -24,16 +25,14 @@ make_assessment <- function(pars, roster) {
         dplyr::select(-order) |>
         dplyr::select(netID, name, question, assessment, feedback)
 
-    # Save template
-    readr::write_csv(result,
-        here::here('assignments', pars$assign, 'assessment_temp.csv'))
+    return(result)
 }
 
 #' Get saved assessment data frame
 #'
 #' @param pars List of parameters defining assignment
 #' @export
-get_assessment <- function(pars) {
+get_local_assessment <- function(pars) {
     path <- here::here("assignments", pars$assign, "assessment.csv")
     return(readr::read_csv(path))
 }
@@ -43,7 +42,7 @@ get_assessment <- function(pars) {
 #' @param pars List of parameters defining assignment
 #' @param url url to google sheet
 #' @export
-get_gradebook <- function(pars, url) {
+get_gradebook_assessment <- function(pars, url) {
     return(googlesheets4::read_sheet(ss = url, sheet = pars$assign))
 }
 
