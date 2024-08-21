@@ -1,69 +1,25 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://jhelvy.github.io/assess/404.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/assess/LICENSE-text.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/assess/LICENSE.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/assess/authors.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/assess/index.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/assess/news/index.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/assess/reference/getLetter.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/assess/reference/get_all_grades.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/assess/reference/get_assignment_grades.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/assess/reference/get_folder_sizes.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/assess/reference/get_gradebook_assessment.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/assess/reference/get_local_assessment.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/assess/reference/index.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/assess/reference/make_blank_assessment.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/assess/reference/make_dir.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/assess/reference/make_reports.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/assess/reference/save_assignment_grades.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/assess/reference/save_final_grades.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/assess/reference/save_raw.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/assess/reference/unzip_submissions.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/assess/reference/update_feedback.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/assess/reference/update_grades.html</loc>
-  </url>
+<urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
+<url><loc>https://jhelvy.github.io/assess/404.html</loc></url>
+<url><loc>https://jhelvy.github.io/assess/LICENSE-text.html</loc></url>
+<url><loc>https://jhelvy.github.io/assess/LICENSE.html</loc></url>
+<url><loc>https://jhelvy.github.io/assess/authors.html</loc></url>
+<url><loc>https://jhelvy.github.io/assess/index.html</loc></url>
+<url><loc>https://jhelvy.github.io/assess/news/index.html</loc></url>
+<url><loc>https://jhelvy.github.io/assess/reference/getLetter.html</loc></url>
+<url><loc>https://jhelvy.github.io/assess/reference/get_all_grades.html</loc></url>
+<url><loc>https://jhelvy.github.io/assess/reference/get_assignment_grades.html</loc></url>
+<url><loc>https://jhelvy.github.io/assess/reference/get_folder_sizes.html</loc></url>
+<url><loc>https://jhelvy.github.io/assess/reference/get_gradebook_assessment.html</loc></url>
+<url><loc>https://jhelvy.github.io/assess/reference/get_local_assessment.html</loc></url>
+<url><loc>https://jhelvy.github.io/assess/reference/index.html</loc></url>
+<url><loc>https://jhelvy.github.io/assess/reference/make_blank_assessment.html</loc></url>
+<url><loc>https://jhelvy.github.io/assess/reference/make_dir.html</loc></url>
+<url><loc>https://jhelvy.github.io/assess/reference/make_reports.html</loc></url>
+<url><loc>https://jhelvy.github.io/assess/reference/save_assignment_grades.html</loc></url>
+<url><loc>https://jhelvy.github.io/assess/reference/save_final_grades.html</loc></url>
+<url><loc>https://jhelvy.github.io/assess/reference/save_raw.html</loc></url>
+<url><loc>https://jhelvy.github.io/assess/reference/unzip_submissions.html</loc></url>
+<url><loc>https://jhelvy.github.io/assess/reference/update_feedback.html</loc></url>
+<url><loc>https://jhelvy.github.io/assess/reference/update_grades.html</loc></url>
 </urlset>
+
