@@ -96,11 +96,11 @@ import_file <- function(file, destination, junkpathsSetting) {
 #' @param roster Class roster (data frame)
 #' @export
 get_folder_sizes <- function(pars, roster) {
-    results <- roster %>%
-        filter(enrolled == 1) %>%
-        select(netID) %>%
-        arrange(netID) %>%
-        mutate(size = NA)
+    results <- roster |>
+        dplyr::filter(enrolled == 1) |>
+        dplyr::select(netID) |>
+        dplyr::arrange(netID) |>
+        dplyr::mutate(size = NA)
     for (i in seq(nrow(results))) {
         files <- list.files(
             here::here('assignments', pars$assign, 'unzipped', results$netID[i]),

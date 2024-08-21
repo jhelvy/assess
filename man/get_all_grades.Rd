@@ -4,12 +4,14 @@
 \alias{get_all_grades}
 \title{Get all grades data frame}
 \usage{
-get_all_grades(assignments, roster)
+get_all_grades(assignments, roster, weights)
 }
 \arguments{
 \item{assignments}{Data frame of all assignments}
 
 \item{roster}{Course roster data frame}
+
+\item{weights}{The column in assignments to use for weighting}
 }
 \description{
 Data frame of all assignments

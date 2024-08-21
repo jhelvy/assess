@@ -8,6 +8,8 @@ save_assignment_grades(pars, roster)
 }
 \arguments{
 \item{pars}{Parameters defining assignment}
+
+\item{roster}{Course roster data frame}
 }
 \description{
 Save all grades to file

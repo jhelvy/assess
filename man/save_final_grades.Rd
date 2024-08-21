@@ -4,12 +4,20 @@
 \alias{save_final_grades}
 \title{Save final grades to csv}
 \usage{
-save_final_grades(assignments, roster, drop = NULL, file = "grades.csv")
+save_final_grades(
+  assignments,
+  roster,
+  weights = "weight",
+  drop = NULL,
+  file = "grades.csv"
+)
 }
 \arguments{
 \item{assignments}{Data frame of all assignments}
 
 \item{roster}{Course roster data frame}
+
+\item{weights}{The column in assignments to use for weighting}
 
 \item{drop}{Which assignments to drop from grade computation. Should be a
 named vector defining the category and number to drop.}
