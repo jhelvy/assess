@@ -96,6 +96,9 @@ import_file <- function(file, destination, junkpathsSetting) {
 #' @param roster Class roster (data frame)
 #' @export
 get_folder_sizes <- function(pars, roster) {
+
+    enrolled <- netID <- NULL
+
     results <- roster |>
         dplyr::filter(enrolled == 1) |>
         dplyr::select(netID) |>

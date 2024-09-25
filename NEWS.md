@@ -1,3 +1,9 @@
+# dev version
+
+# assess 0.7.0
+
+- Added `copy_team_grades()` function
+
 # assess 0.3.2
 
 - Updated how grades are computed where the weight of any missing grades (not yet assigned or graded) is proportionally re-distributed across other assignments.

@@ -295,3 +295,37 @@ update_grades <- function(assignments, roster, weights, path_box, drop = NULL)
         readr::write_csv(temp_grade, file.path(path_box, row$box_folder, "grade_course.csv"))
     }
 }
+
+#' Copy grades from one team member to all others
+#'
+#' @param df Assessment with one graded team member
+#' @param roster Course roster data frame
+#' @export
+copy_team_grades <- function(df, roster) {
+
+    netID <- team <- enrolled <- NULL
+
+    copy_grades <- function(df) {
+        for (q in unique(df$question)) {
+            # Find the first non-NA assessment and feedback for each question
+            first_assessment <- stats::na.omit(df$assessment[df$question == q])[1]
+            first_feedback <- stats::na.omit(df$feedback[df$question == q])[1]
+
+            # If a non-NA value is found, copy it to all rows for this question
+            if (!is.na(first_assessment)) {
+                df$assessment[df$question == q] <- first_assessment
+                df$feedback[df$question == q] <- first_feedback
+            }
+        }
+        return(df)
+    }
+    df <- df |>
+        dplyr::left_join(
+            roster |> dplyr::select(netID, team),
+            by = 'netID'
+        ) |>
+        dplyr::group_by(team) |>
+        dplyr::group_modify(~copy_grades(.x))
+
+    return(df)
+}
