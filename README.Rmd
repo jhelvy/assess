@@ -23,12 +23,11 @@ This package is highly bespoke to the [courses](https://www.jhelvy.com/teaching)
 
 ## Installation
 
-The current version is not yet on CRAN, but you can install it from
-Github using the {remotes} library:
+You can install it from Github:
 
 ```{r, eval=FALSE}
-# install.packages("remotes")
-remotes::install_github("jhelvy/assess")
+# install.packages("pak")
+pak::pak("jhelvy/assess")
 ```
 
 Load the library with:
