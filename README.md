@@ -1,13 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# assess <a href='https://jhelvy.github.io/assess/'><img src='man/figures/logo.png' align="right" style="height:139px;"/></a>
-
-<!-- badges: start -->
-
-[![CRAN
-status](https://www.r-pkg.org/badges/version/assess)](https://CRAN.R-project.org/package=assess)
-<!-- badges: end -->
+# assess
 
 assess: Course assignment grader for courses taught by Professor John
 Paul Helveston.

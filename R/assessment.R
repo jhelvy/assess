@@ -5,7 +5,7 @@
 #' @export
 make_blank_assessment <- function(pars, roster) {
 
-    enrolled <- netID <- name <- order <- question <- assessment <- feedback <- NULL
+    enrolled <- netID <- name <- order <- question <- assessment <- feedback <- late <-  NULL
 
     result <- roster |>
         dplyr::filter(enrolled == 1) |>
@@ -21,9 +21,9 @@ make_blank_assessment <- function(pars, roster) {
     }
     result <- do.call(rbind, temp) |>
         dplyr::arrange(netID, order) |>
-        dplyr::mutate(assessment = "", feedback = "") |>
+        dplyr::mutate(assessment = "", feedback = "", late = "", result = "") |>
         dplyr::select(-order) |>
-        dplyr::select(netID, name, question, assessment, feedback)
+        dplyr::select(netID, name, question, assessment, feedback, late, result)
 
     return(result)
 }
