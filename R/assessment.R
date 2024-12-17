@@ -45,5 +45,3 @@ get_local_assessment <- function(pars) {
 get_gradebook_assessment <- function(pars, url) {
     return(googlesheets4::read_sheet(ss = url, sheet = pars$assign))
 }
-
-

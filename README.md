@@ -14,12 +14,11 @@ least for now), but you’re welcome to use it if it’s helpful for you!
 
 ## Installation
 
-The current version is not yet on CRAN, but you can install it from
-Github using the {remotes} library:
+You can install it from Github:
 
 ``` r
-# install.packages("remotes")
-remotes::install_github("jhelvy/assess")
+# install.packages("pak")
+pak::pak("jhelvy/assess")
 ```
 
 Load the library with:

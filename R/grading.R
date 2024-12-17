@@ -1,3 +1,23 @@
+#' Update participation grade
+#'
+#' @param url url to google sheet gradebook.
+#' @param roster Course roster data frame.
+#' @param buffer Number of days as a buffer. Defaults to `1`
+#' @export
+grade_participation <- function(url, roster, buffer = 1) {
+    netID <- present <- absent <- excused <- total <- grade <- enrolled <- name <- NULL
+    attendance <- get_gradebook_assessment(list(assign = 'attendance'), url) |>
+        dplyr::select(netID, present, absent, excused) |>
+        dplyr::mutate(
+            total = present + absent + excused,
+            grade = (present + excused + buffer) / (total + buffer)
+        ) |>
+        dplyr::select(netID, grade) |>
+        dplyr::left_join(roster, by = 'netID') |>
+        dplyr::filter(enrolled == 1) |>
+        dplyr::select(netID, grade, name)
+    readr::write_csv(attendance, file.path('grades', 'participation.csv'))
+}
 
 #' Save all grades to file
 #'
@@ -87,7 +107,7 @@ add_bonus <- function(df, bonus) {
 #'
 #' @param x Grade
 #' @export
-getLetter <- function(x) {
+get_letter <- function(x) {
     scale <- tibble::tribble(
         ~letter, ~bound,
         'A',  0.94,
@@ -205,9 +225,9 @@ save_final_grades <- function(
         ) |>
         dplyr::mutate(
             grade_max = ifelse(grade > grade_max, grade, grade_max),
-            letter = getLetter(grade),
+            letter = get_letter(grade),
             grade = round(grade, 3),
-            letter_max = getLetter(grade_max),
+            letter_max = get_letter(grade_max),
             grade_max = round(grade_max, 3)
         ) |>
         dplyr::arrange(dplyr::desc(grade))
