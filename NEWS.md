@@ -1,5 +1,9 @@
 # dev version
 
+# assess 0.8.1
+
+- Print out netIDs when unzipping
+
 # assess 0.7.0
 
 - Added `copy_team_grades()` function

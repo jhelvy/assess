@@ -49,8 +49,10 @@ unzip_submissions <- function(pars, roster, junkpathsSetting = FALSE) {
             files[which(stringr::str_detect(files, id$gwid))]
         )
         if (length(studentFiles) == 0) {
-            cat(id$netID, '\n')
+            cat('Missing:', id$netID, '\n')
             next()
+        } else {
+            cat(id$netID, '\n')
         }
         dest <- here::here("assignments", pars$assign, "unzipped", id$netID)
         make_dir(dest)
