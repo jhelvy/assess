@@ -1,5 +1,9 @@
 # dev version
 
+# assess 0.8.2
+
+- Add override column in gradebook to assign an override grade
+
 # assess 0.8.1
 
 - Print out netIDs when unzipping

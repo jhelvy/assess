@@ -38,7 +38,7 @@ save_assignment_grades <- function(pars, roster) {
 #' @param roster Course roster data frame
 #' @export
 get_assignment_grades <- function(pars, roster) {
-    assessment <- question <- weight <- enrolled <- netID <- score <- NULL
+    assessment <- question <- weight <- enrolled <- netID <- score <- grade <- override <- NULL
 
     assessment <- get_local_assessment(pars)
     if (is.null(pars$weights)) {
@@ -72,6 +72,15 @@ get_assignment_grades <- function(pars, roster) {
         dplyr::left_join(grades, by = 'netID') |>
         dplyr::full_join(dplyr::select(roster, netID, enrolled), by = "netID") |>
         dplyr::filter(enrolled == 1)
+    if (!is.null(assessment$override)) {
+        override <- assessment |>
+            dplyr::filter(!is.na(override)) |>
+            dplyr::distinct(netID, override)
+        grades$override <- NULL
+        grades <- grades |>
+            dplyr::left_join(override) |>
+            dplyr::mutate(grade = ifelse(is.na(override), grade, override))
+    }
     return(grades)
 }
 
