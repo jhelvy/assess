@@ -72,7 +72,7 @@ get_assignment_grades <- function(pars, roster) {
         dplyr::left_join(grades, by = 'netID') |>
         dplyr::full_join(dplyr::select(roster, netID, enrolled), by = "netID") |>
         dplyr::filter(enrolled == 1)
-    if (!is.null(assessment$override)) {
+    if ('override' %in% names(assessment)) {
         override <- assessment |>
             dplyr::filter(!is.na(override)) |>
             dplyr::distinct(netID, override)
