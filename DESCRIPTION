@@ -1,6 +1,6 @@
 Package: assess
 Title: Course Assignment Grader
-Version: 0.8.2
+Version: 0.8.3
 Maintainer: John Helveston <john.helveston@gmail.com>
 Authors@R: c(
     person(given   = "John",
