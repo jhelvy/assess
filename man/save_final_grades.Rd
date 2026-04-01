@@ -9,6 +9,7 @@ save_final_grades(
   roster,
   weights = "weight",
   drop = NULL,
+  drop_netid = NULL,
   file = "grades.csv"
 )
 }
@@ -21,6 +22,10 @@ save_final_grades(
 
 \item{drop}{Which assignments to drop from grade computation. Should be a
 named vector defining the category and number to drop.}
+
+\item{drop_netid}{Optional named list of per-student drop overrides. Each
+element is a named vector (same format as \code{drop}) keyed by the student's
+netID. Student-specific values override the global \code{drop} for that category.}
 
 \item{file}{File name where to save grades as csv}
 }

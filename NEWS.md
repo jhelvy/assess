@@ -1,5 +1,9 @@
 # dev version
 
+# assess 0.9.0
+
+- Added `drop_netid` argument in `save_final_grades()` to allow student-specific dropping while grading.
+
 # assess 0.8.3
 
 - Print ID when making reports

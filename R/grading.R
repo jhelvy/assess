@@ -202,6 +202,9 @@ get_all_grades <- function(assignments, roster, weights) {
 #' @param weights The column in assignments to use for weighting
 #' @param drop Which assignments to drop from grade computation. Should be a
 #' named vector defining the category and number to drop.
+#' @param drop_netid Optional named list of per-student drop overrides. Each
+#' element is a named vector (same format as `drop`) keyed by the student's
+#' netID. Student-specific values override the global `drop` for that category.
 #' @param file File name where to save grades as csv
 #' @export
 save_final_grades <- function(
@@ -209,6 +212,7 @@ save_final_grades <- function(
   roster,
   weights = 'weight',
   drop = NULL,
+  drop_netid = NULL,
   file = 'grades.csv'
 ) {
   netID <- n <- category <- grade <- grade_max <- grade_category <- weight <- weight_max <- weight_fill <- NULL
@@ -216,12 +220,35 @@ save_final_grades <- function(
   grades <- get_all_grades(assignments, roster, weights)
 
   # Drop lowest assignments
-  if (!is.null(drop)) {
-    for (i in 1:length(drop)) {
-      grades <- grades |>
-        dplyr::group_by(netID) |>
-        drop_lowest(names(drop[i]), drop[i], assignments)
+  if (!is.null(drop) || !is.null(drop_netid)) {
+    enrolled_ids <- unique(grades$netID)
+
+    # Build per-student drop specification starting from the global drop
+    drop_spec <- stats::setNames(rep(list(drop), length(enrolled_ids)), enrolled_ids)
+
+    # Apply student-specific overrides on top of the global drop
+    if (!is.null(drop_netid)) {
+      for (id in names(drop_netid)) {
+        merged <- if (!is.null(drop)) drop else c()
+        merged[names(drop_netid[[id]])] <- drop_netid[[id]]
+        drop_spec[[id]] <- merged
+      }
     }
+
+    grades <- grades |>
+      dplyr::group_by(netID) |>
+      dplyr::group_modify(function(df, key) {
+        id_drops <- drop_spec[[key$netID]]
+        if (is.null(id_drops) || length(id_drops) == 0) return(df)
+        for (j in seq_along(id_drops)) {
+          n_drop <- id_drops[j]
+          if (n_drop > 0) {
+            df <- drop_lowest(df, names(id_drops)[j], n_drop, assignments)
+          }
+        }
+        return(df)
+      }) |>
+      dplyr::ungroup()
   }
 
   # Compute grade for each category
