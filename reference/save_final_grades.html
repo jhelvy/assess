@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">assess</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.8.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.9.0</span>
       </span>
     </div>
 
@@ -64,6 +64,7 @@
 <span>  <span class="va">roster</span>,</span>
 <span>  weights <span class="op">=</span> <span class="st">"weight"</span>,</span>
 <span>  drop <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  drop_netid <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  file <span class="op">=</span> <span class="st">"grades.csv"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -89,6 +90,12 @@
 named vector defining the category and number to drop.</p></dd>
 
 
+<dt id="arg-drop-netid">drop_netid<a class="anchor" aria-label="anchor" href="#arg-drop-netid"></a></dt>
+<dd><p>Optional named list of per-student drop overrides. Each
+element is a named vector (same format as <code>drop</code>) keyed by the student's
+netID. Student-specific values override the global <code>drop</code> for that category.</p></dd>
+
+
 <dt id="arg-file">file<a class="anchor" aria-label="anchor" href="#arg-file"></a></dt>
 <dd><p>File name where to save grades as csv</p></dd>
 
@@ -106,7 +113,7 @@ named vector defining the category and number to drop.</p></dd>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.1.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
 </div>
 
       </footer></div>
