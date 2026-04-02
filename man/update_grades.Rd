@@ -4,7 +4,14 @@
 \alias{update_grades}
 \title{Update grades for all assignments}
 \usage{
-update_grades(assignments, roster, weights, path_box, drop = NULL)
+update_grades(
+  assignments,
+  roster,
+  weights,
+  path_box,
+  drop = NULL,
+  drop_netid = NULL
+)
 }
 \arguments{
 \item{assignments}{Assignments data frame}
@@ -17,6 +24,10 @@ update_grades(assignments, roster, weights, path_box, drop = NULL)
 
 \item{drop}{Which assignments to drop from grade computation. Should be a
 named vector defining the category and number to drop.}
+
+\item{drop_netid}{Optional named list of per-student drop overrides. Each
+element is a named vector (same format as \code{drop}) keyed by the student's
+netID. Student-specific values override the global \code{drop} for that category.}
 }
 \description{
 Update grades for all assignments in Box folders

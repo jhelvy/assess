@@ -120,31 +120,31 @@ add_bonus <- function(df, bonus) {
 #' @export
 get_letter <- function(x) {
   scale <- tibble::tribble(
-    ~letter,
-    ~bound,
-    'A',
-    0.94,
-    'A-',
-    0.90,
-    'B+',
-    0.87,
-    'B',
-    0.84,
-    'B-',
-    0.80,
-    'C+',
-    0.77,
-    'C',
-    0.74,
-    'C-',
-    0.70,
-    'D+',
-    0.67,
-    'D',
-    0.64,
-    'D-',
-    0.60,
-    'F',
+    ~letter ,
+    ~bound  ,
+    'A'     ,
+     0.94   ,
+    'A-'    ,
+     0.90   ,
+    'B+'    ,
+     0.87   ,
+    'B'     ,
+     0.84   ,
+    'B-'    ,
+     0.80   ,
+    'C+'    ,
+     0.77   ,
+    'C'     ,
+     0.74   ,
+    'C-'    ,
+     0.70   ,
+    'D+'    ,
+     0.67   ,
+    'D'     ,
+     0.64   ,
+    'D-'    ,
+     0.60   ,
+    'F'     ,
     -1.0
   )
   letters <- c()
@@ -224,7 +224,10 @@ save_final_grades <- function(
     enrolled_ids <- unique(grades$netID)
 
     # Build per-student drop specification starting from the global drop
-    drop_spec <- stats::setNames(rep(list(drop), length(enrolled_ids)), enrolled_ids)
+    drop_spec <- stats::setNames(
+      rep(list(drop), length(enrolled_ids)),
+      enrolled_ids
+    )
 
     # Apply student-specific overrides on top of the global drop
     if (!is.null(drop_netid)) {
@@ -239,7 +242,9 @@ save_final_grades <- function(
       dplyr::group_by(netID) |>
       dplyr::group_modify(function(df, key) {
         id_drops <- drop_spec[[key$netID]]
-        if (is.null(id_drops) || length(id_drops) == 0) return(df)
+        if (is.null(id_drops) || length(id_drops) == 0) {
+          return(df)
+        }
         for (j in seq_along(id_drops)) {
           n_drop <- id_drops[j]
           if (n_drop > 0) {
@@ -309,34 +314,57 @@ drop_lowest <- function(df, cat, number, assignments) {
 #' @param weights The column in assignments to use for weighting
 #' @param drop Which assignments to drop from grade computation. Should be a
 #' named vector defining the category and number to drop.
+#' @param drop_netid Optional named list of per-student drop overrides. Each
+#' element is a named vector (same format as `drop`) keyed by the student's
+#' netID. Student-specific values override the global `drop` for that category.
 #' @param path_box Path to root box folder
 #' @export
-update_grades <- function(assignments, roster, weights, path_box, drop = NULL) {
+update_grades <- function(
+  assignments,
+  roster,
+  weights,
+  path_box,
+  drop = NULL,
+  drop_netid = NULL
+) {
   netID <- category <- n <- grade <- weight <- score <- letter <- NULL
 
   grades_final <- readr::read_csv(here::here('grades', 'grades_final.csv'))
   grades <- get_all_grades(assignments, roster, weights)
 
-  # Account for any dropped assignments
-  if (!is.null(drop)) {
-    drop_df <- as.data.frame(drop)
-    drop_df$name <- row.names(drop_df)
-    cat_count <- grades |>
-      dplyr::count(netID, category) |>
-      dplyr::left_join(drop_df, by = c("category" = "name")) |>
-      dplyr::mutate(
-        drop = ifelse(is.na(drop), 0, drop),
-        n = n - drop
-      ) |>
-      dplyr::distinct(category, n)
-  } else {
-    cat_count <- grades |>
-      dplyr::count(netID, category) |>
-      dplyr::distinct(category, n)
+  # Build per-student per-category counts, accounting for drops
+  cat_count <- grades |>
+    dplyr::count(netID, category)
+
+  if (!is.null(drop) || !is.null(drop_netid)) {
+    enrolled_ids <- unique(cat_count$netID)
+    drop_spec <- stats::setNames(
+      rep(list(drop), length(enrolled_ids)),
+      enrolled_ids
+    )
+    if (!is.null(drop_netid)) {
+      for (id in names(drop_netid)) {
+        merged <- if (!is.null(drop)) drop else c()
+        merged[names(drop_netid[[id]])] <- drop_netid[[id]]
+        drop_spec[[id]] <- merged
+      }
+    }
+    cat_count <- cat_count |>
+      dplyr::rowwise() |>
+      dplyr::mutate(n = {
+        spec <- drop_spec[[netID]]
+        drop_n <- if (!is.null(spec) && category %in% names(spec)) {
+          spec[[category]]
+        } else {
+          0
+        }
+        max(n - as.integer(drop_n), 0)
+      }) |>
+      dplyr::ungroup()
   }
 
   grades_report <- grades |>
-    dplyr::left_join(cat_count, by = 'category') |>
+    dplyr::left_join(cat_count, by = c('netID', 'category')) |>
     dplyr::mutate(weight = weight / n) |>
     dplyr::select(netID, assignment = assign, score = grade, weight) |>
     dplyr::mutate(weight = round(weight, 3))
