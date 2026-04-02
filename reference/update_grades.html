@@ -59,7 +59,14 @@
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">update_grades</span><span class="op">(</span><span class="va">assignments</span>, <span class="va">roster</span>, <span class="va">weights</span>, <span class="va">path_box</span>, drop <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">update_grades</span><span class="op">(</span></span>
+<span>  <span class="va">assignments</span>,</span>
+<span>  <span class="va">roster</span>,</span>
+<span>  <span class="va">weights</span>,</span>
+<span>  <span class="va">path_box</span>,</span>
+<span>  drop <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  drop_netid <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
@@ -85,6 +92,12 @@
 <dt id="arg-drop">drop<a class="anchor" aria-label="anchor" href="#arg-drop"></a></dt>
 <dd><p>Which assignments to drop from grade computation. Should be a
 named vector defining the category and number to drop.</p></dd>
+
+
+<dt id="arg-drop-netid">drop_netid<a class="anchor" aria-label="anchor" href="#arg-drop-netid"></a></dt>
+<dd><p>Optional named list of per-student drop overrides. Each
+element is a named vector (same format as <code>drop</code>) keyed by the student's
+netID. Student-specific values override the global <code>drop</code> for that category.</p></dd>
 
 </dl></div>
 
