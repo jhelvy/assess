@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">assess</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.10.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.11.0</span>
       </span>
     </div>
 
@@ -53,6 +53,11 @@
       <small>Source: <a href="https://github.com/jhelvy/assess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="page-header" data-toc-text="0.11.0" id="assess-0110">assess 0.11.0<a class="anchor" aria-label="anchor" href="#assess-0110"></a></h2>
+<ul><li>
+<code><a href="../reference/create_repos.html">create_repos()</a></code>, <code><a href="../reference/invite_collaborators.html">invite_collaborators()</a></code>, and <code><a href="../reference/push_repos.html">push_repos()</a></code> now read each repo’s exact name from a roster column (<code>repo_col</code>, default <code>"gh"</code>) instead of building it from a <code>prefix</code>. The <code>prefix</code> argument is removed. Repos are <code>&lt;org&gt;/&lt;gh&gt;</code>, so the org’s term (e.g. <code>f26</code>) never gets duplicated at the repo level. The same <code>gh</code>-column convention drives team repos.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.9.0" id="assess-090">assess 0.9.0<a class="anchor" aria-label="anchor" href="#assess-090"></a></h2>
 <ul><li>Added <code>drop_netid</code> argument in <code><a href="../reference/save_final_grades.html">save_final_grades()</a></code> to allow student-specific dropping while grading.</li>
