@@ -4,16 +4,16 @@
 \alias{create_repos}
 \title{Create a private GitHub repo for each enrolled student}
 \usage{
-create_repos(roster, org, prefix = org, add_readme = TRUE, dry_run = FALSE)
+create_repos(roster, org, repo_col = "gh", add_readme = TRUE, dry_run = FALSE)
 }
 \arguments{
-\item{roster}{Course roster data frame. Must have \code{netID} and \code{enrolled}
-columns; \code{name}, if present, is used for the repo description.}
+\item{roster}{Course roster data frame. Must have \code{netID}, \code{enrolled}, and
+\code{repo_col} columns; \code{name}, if present, is used for the repo description.}
 
 \item{org}{GitHub organization to create the repos in (e.g. \code{"eda-f26"}).}
 
-\item{prefix}{Repo-name prefix. Defaults to \code{org}, giving repo names like
-\code{eda-f26-jph}.}
+\item{repo_col}{Roster column holding each repo's exact name (e.g.
+\code{"eda-jph"}). Defaults to \code{"gh"}.}
 
 \item{add_readme}{Initialize each repo with a README? Defaults to \code{TRUE}.}
 
@@ -25,9 +25,9 @@ Invisibly, a tibble with one row per enrolled student and a
 \code{status} column (\code{created}, \code{skipped}, \code{failed}, or \code{would_create}).
 }
 \description{
-Creates one private repo named \verb{<prefix>-<netID>} inside \code{org} for every
-roster row with \code{enrolled == 1}. Repos that already exist are skipped, so
-the function is safe to re-run.
+Creates one private repo inside \code{org} for every roster row with
+\code{enrolled == 1}, named by that row's \code{repo_col} value (e.g. \code{eda-jph}).
+Repos that already exist are skipped, so the function is safe to re-run.
 }
 \details{
 Requires the \code{gh} CLI to be installed and authenticated

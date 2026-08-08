@@ -1,4 +1,10 @@
-# dev version
+# assess 0.11.0
+
+- `create_repos()`, `invite_collaborators()`, and `push_repos()` now read each
+  repo's exact name from a roster column (`repo_col`, default `"gh"`) instead of
+  building it from a `prefix`. The `prefix` argument is removed. Repos are
+  `<org>/<gh>`, so the org's term (e.g. `f26`) never gets duplicated at the repo
+  level. The same `gh`-column convention drives team repos.
 
 # assess 0.9.0
 

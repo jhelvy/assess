@@ -7,7 +7,7 @@
 invite_collaborators(
   roster,
   org,
-  prefix = org,
+  repo_col = "gh",
   permission = "push",
   username_col = "github_username",
   dry_run = FALSE
@@ -15,11 +15,12 @@ invite_collaborators(
 }
 \arguments{
 \item{roster}{Course roster data frame. Must have \code{netID}, \code{enrolled}, and
-the column named by \code{username_col}.}
+the columns named by \code{repo_col} and \code{username_col}.}
 
 \item{org}{GitHub organization the repos live in.}
 
-\item{prefix}{Repo-name prefix. Defaults to \code{org}.}
+\item{repo_col}{Roster column holding each repo's exact name. Defaults to
+\code{"gh"}.}
 
 \item{permission}{Collaborator permission level: one of \code{"pull"},
 \code{"triage"}, \code{"push"}, \code{"maintain"}, \code{"admin"}. Defaults to \code{"push"}.}
@@ -35,9 +36,9 @@ Invisibly, a tibble with one row per enrolled student and a
 }
 \description{
 Sends a collaborator invitation for every enrolled student to their repo
-(\verb{<prefix>-<netID>} in \code{org}), using the GitHub handle in the roster's
-\code{username_col}. Students with no handle on file are reported and skipped.
-Idempotent: GitHub treats an already-invited user as a no-op.
+(\verb{org/<repo_col>}), using the GitHub handle in the roster's \code{username_col}.
+Students with no handle on file are reported and skipped. Idempotent:
+GitHub treats an already-invited user as a no-op.
 }
 \details{
 Requires the \code{gh} CLI to be installed and authenticated, and the repos to

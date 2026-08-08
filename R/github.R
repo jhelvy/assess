@@ -2,14 +2,14 @@
 #
 # These functions wrap the GitHub CLI (`gh`) with processx so the whole
 # per-student repo workflow can be driven from R using the class roster. They
-# are course-agnostic: pass the GitHub `org` (and, if it differs from the org,
-# a repo name `prefix`) so the same functions serve any course that uses the
-# roster format (columns include `netID`, `enrolled`, and optionally `name`
-# and `github_username`).
+# are course-agnostic: pass the GitHub `org` and keep each repo's exact name in
+# a roster column (default `gh`), so the same functions serve any course that
+# uses the roster format (columns include `netID`, `enrolled`, `gh`, and
+# optionally `name` and `github_username`).
 #
-# Repo names are constructed as `<prefix>-<netID>` inside `<org>`, e.g. org
-# "eda-f26" gives "eda-f26/eda-f26-jph". Only rows with `enrolled == 1` are
-# acted on.
+# Each repo is `<org>/<gh>`, e.g. org "eda-f26" with gh "eda-jph" gives
+# "eda-f26/eda-jph". The same works for team repos driven from a teams table
+# with its own `gh` column. Only rows with `enrolled == 1` are acted on.
 
 # ---- internal helpers -----------------------------------------------------
 
@@ -20,31 +20,36 @@ enrolled_rows <- function(roster) {
 }
 
 # Planning table for repo operations: one row per enrolled student with the
-# short repo name and the full `org/repo` slug. Pure (no gh calls), so the
-# name-construction and enrolled-filtering logic is unit-testable.
-plan_repos <- function(roster, org, prefix = org) {
+# repo name (from `repo_col`) and the full `org/repo` slug. Pure (no gh calls),
+# so the name lookup and enrolled-filtering logic is unit-testable.
+plan_repos <- function(roster, org, repo_col = "gh") {
+  if (!repo_col %in% names(roster)) {
+    stop(sprintf("Roster has no '%s' column.", repo_col), call. = FALSE)
+  }
   r <- enrolled_rows(roster)
+  repo <- as.character(r[[repo_col]])
   tibble::tibble(
     netID = r$netID,
     name  = if ("name" %in% names(r)) r$name else NA_character_,
-    repo  = paste0(prefix, "-", r$netID),
-    full  = paste0(org, "/", prefix, "-", r$netID)
+    repo  = repo,
+    full  = paste0(org, "/", repo)
   )
 }
 
 # Planning table for collaborator invites: adds the student's GitHub handle
-# and a `missing` flag for rows with no handle. Errors if the column is absent.
-plan_collaborators <- function(roster, org, prefix = org,
+# and a `missing` flag for rows with no handle. Errors if a column is absent.
+plan_collaborators <- function(roster, org, repo_col = "gh",
                                username_col = "github_username") {
   if (!username_col %in% names(roster)) {
     stop(sprintf("Roster has no '%s' column.", username_col), call. = FALSE)
   }
+  plan <- plan_repos(roster, org, repo_col)
   r <- enrolled_rows(roster)
   user <- as.character(r[[username_col]])
   tibble::tibble(
-    netID   = r$netID,
-    repo    = paste0(prefix, "-", r$netID),
-    full    = paste0(org, "/", prefix, "-", r$netID),
+    netID   = plan$netID,
+    repo    = plan$repo,
+    full    = plan$full,
     user    = user,
     missing = is.na(user) | !nzchar(trimws(user))
   )
@@ -72,27 +77,27 @@ repo_exists <- function(full) gh_run(c("repo", "view", full))$status == 0
 
 #' Create a private GitHub repo for each enrolled student
 #'
-#' Creates one private repo named `<prefix>-<netID>` inside `org` for every
-#' roster row with `enrolled == 1`. Repos that already exist are skipped, so
-#' the function is safe to re-run.
+#' Creates one private repo inside `org` for every roster row with
+#' `enrolled == 1`, named by that row's `repo_col` value (e.g. `eda-jph`).
+#' Repos that already exist are skipped, so the function is safe to re-run.
 #'
 #' Requires the `gh` CLI to be installed and authenticated
 #' (`gh auth login`).
 #'
-#' @param roster Course roster data frame. Must have `netID` and `enrolled`
-#'   columns; `name`, if present, is used for the repo description.
+#' @param roster Course roster data frame. Must have `netID`, `enrolled`, and
+#'   `repo_col` columns; `name`, if present, is used for the repo description.
 #' @param org GitHub organization to create the repos in (e.g. `"eda-f26"`).
-#' @param prefix Repo-name prefix. Defaults to `org`, giving repo names like
-#'   `eda-f26-jph`.
+#' @param repo_col Roster column holding each repo's exact name (e.g.
+#'   `"eda-jph"`). Defaults to `"gh"`.
 #' @param add_readme Initialize each repo with a README? Defaults to `TRUE`.
 #' @param dry_run If `TRUE`, print what would be created without calling `gh`.
 #'   Defaults to `FALSE`.
 #' @return Invisibly, a tibble with one row per enrolled student and a
 #'   `status` column (`created`, `skipped`, `failed`, or `would_create`).
 #' @export
-create_repos <- function(roster, org, prefix = org, add_readme = TRUE,
+create_repos <- function(roster, org, repo_col = "gh", add_readme = TRUE,
                          dry_run = FALSE) {
-  plan <- plan_repos(roster, org, prefix)
+  plan <- plan_repos(roster, org, repo_col)
   if (!dry_run) assert_gh_ready()
   plan$status <- NA_character_
 
@@ -138,17 +143,18 @@ create_repos <- function(roster, org, prefix = org, add_readme = TRUE,
 #' Invite each enrolled student to their own repo
 #'
 #' Sends a collaborator invitation for every enrolled student to their repo
-#' (`<prefix>-<netID>` in `org`), using the GitHub handle in the roster's
-#' `username_col`. Students with no handle on file are reported and skipped.
-#' Idempotent: GitHub treats an already-invited user as a no-op.
+#' (`org/<repo_col>`), using the GitHub handle in the roster's `username_col`.
+#' Students with no handle on file are reported and skipped. Idempotent:
+#' GitHub treats an already-invited user as a no-op.
 #'
 #' Requires the `gh` CLI to be installed and authenticated, and the repos to
 #' already exist (see [create_repos()]).
 #'
 #' @param roster Course roster data frame. Must have `netID`, `enrolled`, and
-#'   the column named by `username_col`.
+#'   the columns named by `repo_col` and `username_col`.
 #' @param org GitHub organization the repos live in.
-#' @param prefix Repo-name prefix. Defaults to `org`.
+#' @param repo_col Roster column holding each repo's exact name. Defaults to
+#'   `"gh"`.
 #' @param permission Collaborator permission level: one of `"pull"`,
 #'   `"triage"`, `"push"`, `"maintain"`, `"admin"`. Defaults to `"push"`.
 #' @param username_col Roster column holding each student's GitHub handle.
@@ -157,10 +163,11 @@ create_repos <- function(roster, org, prefix = org, add_readme = TRUE,
 #' @return Invisibly, a tibble with one row per enrolled student and a
 #'   `status` column (`invited`, `missing`, `failed`, or `would_invite`).
 #' @export
-invite_collaborators <- function(roster, org, prefix = org, permission = "push",
+invite_collaborators <- function(roster, org, repo_col = "gh",
+                                 permission = "push",
                                  username_col = "github_username",
                                  dry_run = FALSE) {
-  plan <- plan_collaborators(roster, org, prefix, username_col)
+  plan <- plan_collaborators(roster, org, repo_col, username_col)
   if (!dry_run) assert_gh_ready()
   plan$status <- NA_character_
 
@@ -199,20 +206,22 @@ invite_collaborators <- function(roster, org, prefix = org, permission = "push",
 
 #' Commit and push changes across every student repo
 #'
-#' Iterates over each enrolled student's local clone at `dir/<prefix>-<netID>`
-#' and, for any repo with uncommitted changes, stages everything, commits with
+#' Iterates over each enrolled student's local clone at `dir/<repo_col>` and,
+#' for any repo with uncommitted changes, stages everything, commits with
 #' `message`, and pushes. Repos with no changes are left untouched, so this is
 #' safe to run repeatedly (e.g. weekly as assignments are graded).
 #'
 #' Requires the `gh` CLI installed and authenticated, and `gh auth setup-git`
 #' run once so `git push` works non-interactively.
 #'
-#' @param roster Course roster data frame with `netID` and `enrolled`.
+#' @param roster Course roster data frame with `netID`, `enrolled`, and
+#'   `repo_col`.
 #' @param org GitHub organization the repos live in.
 #' @param message Commit message (required).
 #' @param dir Directory containing the local clones. Defaults to
 #'   [here::here()].
-#' @param prefix Repo-name prefix. Defaults to `org`.
+#' @param repo_col Roster column holding each repo's exact name, also used as
+#'   the local clone folder name under `dir`. Defaults to `"gh"`.
 #' @param clone_missing If `TRUE`, clone any repo not present locally before
 #'   committing. Defaults to `FALSE`.
 #' @param gitignore Character vector of `.gitignore` lines to seed into any
@@ -224,13 +233,13 @@ invite_collaborators <- function(roster, org, prefix = org, permission = "push",
 #'   `status` column (`pushed`, `nochange`, `skipped`, `failed`, `cloned`, or
 #'   a `would_*` value under `dry_run`).
 #' @export
-push_repos <- function(roster, org, message, dir = here::here(), prefix = org,
-                       clone_missing = FALSE, gitignore = ".DS_Store",
-                       dry_run = FALSE) {
+push_repos <- function(roster, org, message, dir = here::here(),
+                       repo_col = "gh", clone_missing = FALSE,
+                       gitignore = ".DS_Store", dry_run = FALSE) {
   if (missing(message) || !nzchar(message)) {
     stop("Provide a commit `message`.", call. = FALSE)
   }
-  plan <- plan_repos(roster, org, prefix)
+  plan <- plan_repos(roster, org, repo_col)
   if (!dry_run) assert_gh_ready()
   plan$path <- file.path(dir, plan$repo)
   plan$status <- NA_character_

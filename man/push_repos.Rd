@@ -9,14 +9,15 @@ push_repos(
   org,
   message,
   dir = here::here(),
-  prefix = org,
+  repo_col = "gh",
   clone_missing = FALSE,
   gitignore = ".DS_Store",
   dry_run = FALSE
 )
 }
 \arguments{
-\item{roster}{Course roster data frame with \code{netID} and \code{enrolled}.}
+\item{roster}{Course roster data frame with \code{netID}, \code{enrolled}, and
+\code{repo_col}.}
 
 \item{org}{GitHub organization the repos live in.}
 
@@ -25,7 +26,8 @@ push_repos(
 \item{dir}{Directory containing the local clones. Defaults to
 \code{\link[here:here]{here::here()}}.}
 
-\item{prefix}{Repo-name prefix. Defaults to \code{org}.}
+\item{repo_col}{Roster column holding each repo's exact name, also used as
+the local clone folder name under \code{dir}. Defaults to \code{"gh"}.}
 
 \item{clone_missing}{If \code{TRUE}, clone any repo not present locally before
 committing. Defaults to \code{FALSE}.}
@@ -43,8 +45,8 @@ Invisibly, a tibble with one row per enrolled student and a
 a \verb{would_*} value under \code{dry_run}).
 }
 \description{
-Iterates over each enrolled student's local clone at \verb{dir/<prefix>-<netID>}
-and, for any repo with uncommitted changes, stages everything, commits with
+Iterates over each enrolled student's local clone at \verb{dir/<repo_col>} and,
+for any repo with uncommitted changes, stages everything, commits with
 \code{message}, and pushes. Repos with no changes are left untouched, so this is
 safe to run repeatedly (e.g. weekly as assignments are graded).
 }
