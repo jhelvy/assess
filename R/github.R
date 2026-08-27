@@ -180,8 +180,9 @@ invite_collaborators <- function(roster, org, repo_col = "gh",
       next
     }
 
-    args <- c("repo", "add-collaborator", full, plan$user[i],
-              "--permission", permission)
+    args <- c("api", "--method", "PUT",
+              paste0("repos/", full, "/collaborators/", plan$user[i]),
+              "-f", paste0("permission=", permission))
 
     if (dry_run) {
       cat("WOULD INVITE", plan$user[i], "->", full, "\n")
