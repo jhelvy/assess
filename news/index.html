@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">assess</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.11.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.12.1</span>
       </span>
     </div>
 
@@ -53,6 +53,17 @@
       <small>Source: <a href="https://github.com/jhelvy/assess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="page-header" data-toc-text="0.12.1" id="assess-0121">assess 0.12.1<a class="anchor" aria-label="anchor" href="#assess-0121"></a></h2>
+<ul><li>
+<code><a href="../reference/push_repos.html">push_repos()</a></code> now pushes a clone that is ahead of its remote even when the working tree is clean. Previously it inspected only <code>git status</code>, so a commit that had already been made locally but never landed – e.g. a push rejected because the clone was behind, then rebased by <code><a href="../reference/pull_repos.html">pull_repos()</a></code> – was reported as <code>NOCHANGE</code> and silently left unpushed.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="page-header" data-toc-text="0.12.0" id="assess-0120">assess 0.12.0<a class="anchor" aria-label="anchor" href="#assess-0120"></a></h2>
+<ul><li>Added <code><a href="../reference/clone_repos.html">clone_repos()</a></code>: clones any enrolled student’s repo that isn’t on disk yet and leaves existing clones untouched. This is now the only function that creates clones.</li>
+<li>Added <code><a href="../reference/pull_repos.html">pull_repos()</a></code>: fetches each clone and rebases it (<code>--autostash</code>) onto whatever students have pushed. Run it before <code><a href="../reference/push_repos.html">push_repos()</a></code>, every time – <code><a href="../reference/push_repos.html">push_repos()</a></code> never fetches, so a clone that has fallen behind commits fine and then has its push rejected (“Updates were rejected because the remote contains work that you do not have locally”).</li>
+<li>Removed the <code>clone_missing</code> argument from <code><a href="../reference/push_repos.html">push_repos()</a></code>. Cloning is <code><a href="../reference/clone_repos.html">clone_repos()</a></code>’ job; <code><a href="../reference/push_repos.html">push_repos()</a></code> now always skips repos that aren’t cloned, pointing at <code><a href="../reference/clone_repos.html">clone_repos()</a></code> in the message.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.11.0" id="assess-0110">assess 0.11.0<a class="anchor" aria-label="anchor" href="#assess-0110"></a></h2>
 <ul><li>
