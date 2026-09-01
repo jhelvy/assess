@@ -1,3 +1,25 @@
+# assess 0.12.1
+
+- `push_repos()` now pushes a clone that is ahead of its remote even when the
+  working tree is clean. Previously it inspected only `git status`, so a commit
+  that had already been made locally but never landed -- e.g. a push rejected
+  because the clone was behind, then rebased by `pull_repos()` -- was reported
+  as `NOCHANGE` and silently left unpushed.
+
+# assess 0.12.0
+
+- Added `clone_repos()`: clones any enrolled student's repo that isn't on disk
+  yet and leaves existing clones untouched. This is now the only function that
+  creates clones.
+- Added `pull_repos()`: fetches each clone and rebases it (`--autostash`) onto
+  whatever students have pushed. Run it before `push_repos()`, every time --
+  `push_repos()` never fetches, so a clone that has fallen behind commits fine
+  and then has its push rejected ("Updates were rejected because the remote
+  contains work that you do not have locally").
+- Removed the `clone_missing` argument from `push_repos()`. Cloning is
+  `clone_repos()`' job; `push_repos()` now always skips repos that aren't
+  cloned, pointing at `clone_repos()` in the message.
+
 # assess 0.11.0
 
 - `create_repos()`, `invite_collaborators()`, and `push_repos()` now read each

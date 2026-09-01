@@ -10,7 +10,6 @@ push_repos(
   message,
   dir = here::here(),
   repo_col = "gh",
-  clone_missing = FALSE,
   gitignore = ".DS_Store",
   dry_run = FALSE
 )
@@ -29,9 +28,6 @@ push_repos(
 \item{repo_col}{Roster column holding each repo's exact name, also used as
 the local clone folder name under \code{dir}. Defaults to \code{"gh"}.}
 
-\item{clone_missing}{If \code{TRUE}, clone any repo not present locally before
-committing. Defaults to \code{FALSE}.}
-
 \item{gitignore}{Character vector of \code{.gitignore} lines to seed into any
 repo lacking a \code{.gitignore}. Defaults to \code{".DS_Store"}. Use \code{NULL} to
 skip seeding.}
@@ -41,16 +37,24 @@ committing, or pushing.}
 }
 \value{
 Invisibly, a tibble with one row per enrolled student and a
-\code{status} column (\code{pushed}, \code{nochange}, \code{skipped}, \code{failed}, \code{cloned}, or
-a \verb{would_*} value under \code{dry_run}).
+\code{status} column (\code{pushed}, \code{nochange}, \code{skipped}, \code{failed}, or a
+\verb{would_*} value under \code{dry_run}).
 }
 \description{
-Iterates over each enrolled student's local clone at \verb{dir/<repo_col>} and,
-for any repo with uncommitted changes, stages everything, commits with
-\code{message}, and pushes. Repos with no changes are left untouched, so this is
-safe to run repeatedly (e.g. weekly as assignments are graded).
+Iterates over each enrolled student's local clone at \verb{dir/<repo_col>}. A
+repo with uncommitted changes gets everything staged, committed with
+\code{message}, and pushed; a repo that is merely ahead of its remote (commits
+made locally that never landed, e.g. a push rejected while the clone was
+behind) is pushed as-is. Repos that are clean and level with the remote are
+left untouched, so this is safe to run repeatedly (e.g. weekly as
+assignments are graded).
 }
 \details{
+Run \code{\link[=pull_repos]{pull_repos()}} first. This function never fetches, so a clone that is
+behind whatever the student has pushed will commit fine and then have its
+push rejected. Repos that aren't cloned yet are skipped -- see
+\code{\link[=clone_repos]{clone_repos()}}.
+
 Requires the \code{gh} CLI installed and authenticated, and \verb{gh auth setup-git}
 run once so \verb{git push} works non-interactively.
 }

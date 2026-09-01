@@ -10,6 +10,13 @@
 # Each repo is `<org>/<gh>`, e.g. org "eda-f26" with gh "eda-jph" gives
 # "eda-f26/eda-jph". The same works for team repos driven from a teams table
 # with its own `gh` column. Only rows with `enrolled == 1` are acted on.
+#
+# The local-clone functions split by job, and run in this order:
+#   clone_repos()  clone anything missing (once, plus mid-semester adds)
+#   pull_repos()   fetch + rebase onto what students have pushed
+#   push_repos()   stage, commit, push your own changes
+# pull before push, always: push_repos() never fetches, so a clone that has
+# fallen behind commits fine and then has its push rejected.
 
 # ---- internal helpers -----------------------------------------------------
 
@@ -205,12 +212,174 @@ invite_collaborators <- function(roster, org, repo_col = "gh",
   invisible(plan)
 }
 
+#' Clone each student repo that isn't already on disk
+#'
+#' Clones every enrolled student's repo from `org` into `dir/<repo_col>`.
+#' Repos already cloned are left completely alone -- nothing is fetched,
+#' committed, or overwritten -- so this is safe to re-run whenever students are
+#' added mid-semester.
+#'
+#' This is the only function that creates local clones. [push_repos()] and
+#' [pull_repos()] both skip repos that aren't on disk yet; run this first.
+#'
+#' Requires the `gh` CLI to be installed and authenticated
+#' (`gh auth login`), and the repos to already exist on GitHub (see
+#' [create_repos()]).
+#'
+#' @param roster Course roster data frame with `netID`, `enrolled`, and
+#'   `repo_col`.
+#' @param org GitHub organization the repos live in (e.g. `"eda-f26"`).
+#' @param dir Directory to clone into. Defaults to [here::here()]; pass the
+#'   folder that holds the clones (e.g. `here::here("repos")`).
+#' @param repo_col Roster column holding each repo's exact name, also used as
+#'   the local clone folder name under `dir`. Defaults to `"gh"`.
+#' @param dry_run If `TRUE`, print what would be cloned without calling `gh`.
+#' @return Invisibly, a tibble with one row per enrolled student and a
+#'   `status` column (`cloned`, `exists`, `failed`, or `would_clone`).
+#' @export
+clone_repos <- function(roster, org, dir = here::here(), repo_col = "gh",
+                        dry_run = FALSE) {
+  plan <- plan_repos(roster, org, repo_col)
+  if (!dry_run) assert_gh_ready()
+  plan$path <- file.path(dir, plan$repo)
+  plan$status <- NA_character_
+
+  for (i in seq_len(nrow(plan))) {
+    path <- plan$path[i]
+    full <- plan$full[i]
+    repo <- plan$repo[i]
+
+    if (dir.exists(file.path(path, ".git"))) {
+      cat("EXISTS  ", repo, "\n")
+      plan$status[i] <- "exists"
+      next
+    }
+
+    if (dry_run) {
+      cat("WOULD CLONE", full, "\n")
+      plan$status[i] <- "would_clone"
+      next
+    }
+
+    res <- gh_run(c("repo", "clone", full, path))
+    if (res$status == 0) {
+      cat("CLONED  ", repo, "\n")
+      plan$status[i] <- "cloned"
+    } else {
+      cat("FAILED  ", repo, "\n", res$stderr, "\n")
+      plan$status[i] <- "failed"
+    }
+  }
+
+  cat("----\n")
+  print(table(plan$status))
+  invisible(plan)
+}
+
+#' Pull student work into every local clone
+#'
+#' Fetches each enrolled student's repo and rebases the local clone onto it, so
+#' the clones hold whatever students have pushed since you last looked.
+#'
+#' Run this before [push_repos()], every time. `push_repos()` only stages,
+#' commits, and pushes -- it never fetches -- so the moment a student commits
+#' their own work the clone is behind and the push is rejected with *"Updates
+#' were rejected because the remote contains work that you do not have
+#' locally"*.
+#'
+#' Rebase (not merge) keeps the history linear: local commits not yet pushed
+#' (feedback PDFs, refreshed starter files) replay on top of the student's
+#' work. Uncommitted changes are stashed and restored around the rebase
+#' (`--autostash`). Instructor and student rarely touch the same file, so
+#' conflicts are unusual; a repo that does conflict is left mid-rebase and
+#' reported as `conflict` for you to resolve by hand.
+#'
+#' Purely local git plus a fetch from each clone's own `origin`, so no `org`
+#' argument is needed. Repos that aren't cloned yet are skipped -- see
+#' [clone_repos()].
+#'
+#' @param roster Course roster data frame with `netID`, `enrolled`, and
+#'   `repo_col`.
+#' @param dir Directory containing the local clones. Defaults to
+#'   [here::here()]; pass the folder that holds them (e.g.
+#'   `here::here("repos")`).
+#' @param repo_col Roster column holding each repo's exact name, also used as
+#'   the local clone folder name under `dir`. Defaults to `"gh"`.
+#' @param dry_run If `TRUE`, report which repos are behind without rebasing.
+#' @return Invisibly, a tibble with one row per enrolled student and a
+#'   `status` column (`pulled`, `uptodate`, `skipped`, `conflict`, `failed`,
+#'   or `would_pull`).
+#' @export
+pull_repos <- function(roster, dir = here::here(), repo_col = "gh",
+                       dry_run = FALSE) {
+  plan <- plan_repos(roster, org = "", repo_col)
+  plan$path <- file.path(dir, plan$repo)
+  plan$status <- NA_character_
+
+  for (i in seq_len(nrow(plan))) {
+    path <- plan$path[i]
+    repo <- plan$repo[i]
+
+    if (!dir.exists(file.path(path, ".git"))) {
+      cat("SKIP    ", repo, "(not cloned; see clone_repos())\n")
+      plan$status[i] <- "skipped"
+      next
+    }
+
+    if (git_run(c("-C", path, "fetch", "--quiet", "origin"))$status != 0) {
+      cat("FAILED  ", repo, "(fetch)\n")
+      plan$status[i] <- "failed"
+      next
+    }
+
+    # How many commits is the clone behind its upstream branch?
+    behind <- git_run(c("-C", path, "rev-list", "--count", "HEAD..@{upstream}"))
+    if (behind$status != 0) {
+      cat("FAILED  ", repo, "(no upstream branch)\n")
+      plan$status[i] <- "failed"
+      next
+    }
+    if (identical(trimws(behind$stdout), "0")) {
+      cat("UPTODATE", repo, "\n")
+      plan$status[i] <- "uptodate"
+      next
+    }
+
+    if (dry_run) {
+      cat("WOULD PULL", repo, "(behind by", trimws(behind$stdout), ")\n")
+      plan$status[i] <- "would_pull"
+      next
+    }
+
+    res <- git_run(c("-C", path, "pull", "--rebase", "--autostash", "--quiet"))
+    if (res$status == 0) {
+      cat("PULLED  ", repo, "\n")
+      plan$status[i] <- "pulled"
+    } else {
+      cat("CONFLICT", repo, "(left mid-rebase; resolve by hand)\n")
+      plan$status[i] <- "conflict"
+    }
+  }
+
+  cat("----\n")
+  print(table(plan$status))
+  invisible(plan)
+}
+
 #' Commit and push changes across every student repo
 #'
-#' Iterates over each enrolled student's local clone at `dir/<repo_col>` and,
-#' for any repo with uncommitted changes, stages everything, commits with
-#' `message`, and pushes. Repos with no changes are left untouched, so this is
-#' safe to run repeatedly (e.g. weekly as assignments are graded).
+#' Iterates over each enrolled student's local clone at `dir/<repo_col>`. A
+#' repo with uncommitted changes gets everything staged, committed with
+#' `message`, and pushed; a repo that is merely ahead of its remote (commits
+#' made locally that never landed, e.g. a push rejected while the clone was
+#' behind) is pushed as-is. Repos that are clean and level with the remote are
+#' left untouched, so this is safe to run repeatedly (e.g. weekly as
+#' assignments are graded).
+#'
+#' Run [pull_repos()] first. This function never fetches, so a clone that is
+#' behind whatever the student has pushed will commit fine and then have its
+#' push rejected. Repos that aren't cloned yet are skipped -- see
+#' [clone_repos()].
 #'
 #' Requires the `gh` CLI installed and authenticated, and `gh auth setup-git`
 #' run once so `git push` works non-interactively.
@@ -223,20 +392,18 @@ invite_collaborators <- function(roster, org, repo_col = "gh",
 #'   [here::here()].
 #' @param repo_col Roster column holding each repo's exact name, also used as
 #'   the local clone folder name under `dir`. Defaults to `"gh"`.
-#' @param clone_missing If `TRUE`, clone any repo not present locally before
-#'   committing. Defaults to `FALSE`.
 #' @param gitignore Character vector of `.gitignore` lines to seed into any
 #'   repo lacking a `.gitignore`. Defaults to `".DS_Store"`. Use `NULL` to
 #'   skip seeding.
 #' @param dry_run If `TRUE`, print what would happen without writing, cloning,
 #'   committing, or pushing.
 #' @return Invisibly, a tibble with one row per enrolled student and a
-#'   `status` column (`pushed`, `nochange`, `skipped`, `failed`, `cloned`, or
-#'   a `would_*` value under `dry_run`).
+#'   `status` column (`pushed`, `nochange`, `skipped`, `failed`, or a
+#'   `would_*` value under `dry_run`).
 #' @export
 push_repos <- function(roster, org, message, dir = here::here(),
-                       repo_col = "gh", clone_missing = FALSE,
-                       gitignore = ".DS_Store", dry_run = FALSE) {
+                       repo_col = "gh", gitignore = ".DS_Store",
+                       dry_run = FALSE) {
   if (missing(message) || !nzchar(message)) {
     stop("Provide a commit `message`.", call. = FALSE)
   }
@@ -247,27 +414,13 @@ push_repos <- function(roster, org, message, dir = here::here(),
 
   for (i in seq_len(nrow(plan))) {
     path <- plan$path[i]
-    full <- plan$full[i]
     repo <- plan$repo[i]
 
-    # Clone if the local repo is missing (only when asked).
+    # Cloning is clone_repos()' job; a missing clone has nothing to push.
     if (!dir.exists(file.path(path, ".git"))) {
-      if (!clone_missing) {
-        cat("SKIP    ", repo, "(not cloned; use clone_missing = TRUE)\n")
-        plan$status[i] <- "skipped"
-        next
-      }
-      if (dry_run) {
-        cat("WOULD CLONE", full, "\n")
-        plan$status[i] <- "would_clone"
-        next
-      }
-      if (gh_run(c("repo", "clone", full, path))$status != 0) {
-        cat("FAILED   clone", repo, "\n")
-        plan$status[i] <- "failed"
-        next
-      }
-      cat("CLONED  ", repo, "\n")
+      cat("SKIP    ", repo, "(not cloned; see clone_repos())\n")
+      plan$status[i] <- "skipped"
+      next
     }
 
     # Seed a .gitignore if one doesn't exist yet.
@@ -276,9 +429,17 @@ push_repos <- function(roster, org, message, dir = here::here(),
       writeLines(gitignore, gi)
     }
 
-    # Anything to commit?
+    # Two independent reasons to act: uncommitted work in the tree, and
+    # commits already made locally that never reached the remote (e.g. a push
+    # that was rejected because the clone was behind, then rebased by
+    # pull_repos()). Checking only the tree would leave those stranded.
     changes <- git_run(c("-C", path, "status", "--porcelain"))$stdout
-    if (!nzchar(trimws(changes))) {
+    dirty   <- nzchar(trimws(changes))
+
+    ahead_res <- git_run(c("-C", path, "rev-list", "--count", "@{upstream}..HEAD"))
+    ahead <- ahead_res$status == 0 && !identical(trimws(ahead_res$stdout), "0")
+
+    if (!dirty && !ahead) {
       cat("NOCHANGE", repo, "\n")
       plan$status[i] <- "nochange"
       next
@@ -290,9 +451,13 @@ push_repos <- function(roster, org, message, dir = here::here(),
       next
     }
 
-    ok <- git_run(c("-C", path, "add", "-A"))$status == 0 &&
-      git_run(c("-C", path, "commit", "-m", message))$status == 0 &&
+    ok <- if (dirty) {
+      git_run(c("-C", path, "add", "-A"))$status == 0 &&
+        git_run(c("-C", path, "commit", "-m", message))$status == 0 &&
+        git_run(c("-C", path, "push"))$status == 0
+    } else {
       git_run(c("-C", path, "push"))$status == 0
+    }
     if (ok) {
       cat("PUSHED  ", repo, "\n")
       plan$status[i] <- "pushed"

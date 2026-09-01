@@ -78,3 +78,34 @@ test_that("plan_collaborators respects a custom username column", {
   expect_false(plan$missing)
   expect_equal(plan$user, "octocat")
 })
+
+test_that("push_repos no longer takes clone_missing", {
+  expect_false("clone_missing" %in% names(formals(push_repos)))
+})
+
+test_that("clone_repos and pull_repos plan from the same enrolled rows", {
+  roster <- tibble::tibble(
+    netID    = c("jph", "abc", "xyz"),
+    enrolled = c(0, 1, 1),
+    gh       = c("eda-jph", "eda-abc", "eda-xyz")
+  )
+
+  # Both walk plan_repos(), so an unenrolled row is never touched by either.
+  plan <- plan_repos(roster, org = "eda-f26")
+  expect_equal(plan$repo, c("eda-abc", "eda-xyz"))
+
+  # pull_repos() is local-only: no org argument to supply.
+  expect_false("org" %in% names(formals(pull_repos)))
+  expect_true("org" %in% names(formals(clone_repos)))
+})
+
+test_that("pull_repos skips repos that aren't cloned", {
+  roster <- tibble::tibble(netID = "abc", enrolled = 1, gh = "eda-abc")
+
+  out <- suppressWarnings(
+    capture.output(res <- pull_repos(roster, dir = tempfile()))
+  )
+
+  expect_equal(res$status, "skipped")
+  expect_true(any(grepl("clone_repos", out)))
+})
