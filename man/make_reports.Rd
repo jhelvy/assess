@@ -2,20 +2,41 @@
 % Please edit documentation in R/feedback.R
 \name{make_reports}
 \alias{make_reports}
-\title{Make pdf reports of assignment feedback}
+\title{Make reports of assignment feedback}
 \usage{
-make_reports(pars, roster, template, indiv = NULL)
+make_reports(
+  pars,
+  roster,
+  template = NULL,
+  indiv = NULL,
+  type = c("pdf", "md")
+)
 }
 \arguments{
 \item{pars}{Parameters defining assignment}
 
 \item{roster}{Course roster data frame}
 
-\item{template}{qmd template for making report.}
+\item{template}{qmd template for making report. Required when
+\code{type = "pdf"}, ignored when \code{type = "md"}.}
 
 \item{indiv}{One specific id (to build just one report instead of all)
 Defaults to \code{NULL} in which case reports are made for all students.}
+
+\item{type}{Report file type, either \code{"pdf"} (the default, for
+backwards compatibility) or \code{"md"}.}
 }
 \description{
-Make pdf reports of assignment feedback
+Builds one feedback report per student for \code{pars$assign}, staged in
+\verb{assignments/<assign>/feedback/}.
+}
+\details{
+\code{type = "md"} writes a markdown file directly from the assessment data. It
+needs no template and no rendering, so it is effectively instant, and the
+output is deterministic: re-running it for the whole class rewrites every
+file byte-for-byte, so only students whose grade or feedback actually
+changed show up as a diff once the reports are delivered into git repos.
+
+\code{type = "pdf"} renders \code{template} and prints it to pdf via headless Chrome,
+one process per student.
 }
