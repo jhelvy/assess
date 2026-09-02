@@ -1,3 +1,33 @@
+# assess 0.13.0
+
+- Added `check_late()`: reports student commits to an assignment folder made
+  after that assignment's deadline. Run it right after `pull_repos()`, before
+  grading. It flags two things, and neither alone is enough: `hours_late` (past
+  the deadline) and `after_feedback` (landed after that assignment's feedback was
+  pushed, so it definitely wasn't reviewed -- anchored on the last commit
+  touching `feedback/<assign>.md`, so no snapshot file is needed).
+
+  The deadline check is what closes the grading window. A typical `grade.R`
+  pulls again immediately before `push_repos()`, so a student who pushes while
+  you are reviewing gets swept in *underneath* the feedback commit; an
+  ancestry-only check would miss them entirely.
+
+  Commit times are read as unix epoch (`git log --format=%at`) rather than the
+  ISO form, which shifts by the UTC offset when parsed as a local wall clock and
+  flags on-time students as late. Instructor commits are excluded by email, not
+  name, since the same person often commits under more than one author name.
+- Added `read_due_dates()`: builds the `assign`/`due` lookup `check_late()` needs
+  from a course site's `schedule.csv`. Handles homework
+  (`n_assign`/`due_assign`), mini projects (`n_mini`/`due_mini`) and project
+  deliverables (`stub_project`/`due_project`), skipping absent column groups.
+  Hyphenated project stubs are converted to the underscored `assign` names used
+  in `pars.R`; `stub_map` covers anything needing more than that.
+
+  `check_late()`'s `assign` argument takes either a character vector of names or
+  a `pars` list (its `$assign` is used), so it can be called after `pars` is set
+  in `grade.R` to see only the assignment currently being graded. Left `NULL` it
+  sweeps everything past its deadline.
+
 # assess 0.12.1
 
 - `push_repos()` now pushes a clone that is ahead of its remote even when the

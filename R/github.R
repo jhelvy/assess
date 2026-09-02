@@ -471,3 +471,249 @@ push_repos <- function(roster, org, message, dir = here::here(),
   print(table(plan$status))
   invisible(plan)
 }
+
+# ---- late submissions -----------------------------------------------------
+
+# Build the assign/due lookup from an already-read schedule table. Pure, so the
+# column handling and stub mapping are unit-testable without a file.
+#
+# The course sites share one schedule.csv schema: homework in
+# `n_assign`/`due_assign`, mini projects in `n_mini`/`due_mini` (EDA only), and
+# project deliverables in `stub_project`/`due_project`. Absent columns are
+# skipped, so the same parser serves a course that has no minis.
+parse_due_dates <- function(schedule, time = "23:59:59",
+                            tz = Sys.timezone(), stub_map = NULL) {
+  out <- list()
+
+  numbered <- function(n_col, due_col, prefix) {
+    if (!all(c(n_col, due_col) %in% names(schedule))) return(NULL)
+    keep <- !is.na(schedule[[n_col]]) & !is.na(schedule[[due_col]])
+    if (!any(keep)) return(NULL)
+    tibble::tibble(
+      assign = paste0(prefix, schedule[[n_col]][keep]),
+      date   = as.character(schedule[[due_col]][keep])
+    )
+  }
+
+  out$hw   <- numbered("n_assign", "due_assign", "hw")
+  out$mini <- numbered("n_mini", "due_mini", "mini")
+
+  if (all(c("stub_project", "due_project") %in% names(schedule))) {
+    keep <- !is.na(schedule$stub_project) & !is.na(schedule$due_project)
+    if (any(keep)) {
+      # Site stubs are hyphenated (final-analysis); pars.R names use
+      # underscores (final_analysis). stub_map handles the rest, e.g. EDA's
+      # c(presentation = "final_presentation").
+      stub <- gsub("-", "_", schedule$stub_project[keep])
+      if (!is.null(stub_map)) {
+        hit <- stub %in% names(stub_map)
+        stub[hit] <- unname(stub_map[stub[hit]])
+      }
+      out$project <- tibble::tibble(
+        assign = stub,
+        date   = as.character(schedule$due_project[keep])
+      )
+    }
+  }
+
+  due <- dplyr::bind_rows(out)
+  if (nrow(due) == 0) {
+    stop("No due dates found in schedule; expected n_assign/due_assign, ",
+         "n_mini/due_mini, or stub_project/due_project columns.",
+         call. = FALSE)
+  }
+  due$due <- as.POSIXct(paste(due$date, time), tz = tz)
+  due[, c("assign", "due")]
+}
+
+#' Read assignment deadlines from a course site's schedule.csv
+#'
+#' Builds an `assign`/`due` lookup for [check_late()] from the course website
+#' repo's `schedule.csv`, which is the single source of truth for deadlines --
+#' move a date there and the late check follows.
+#'
+#' Handles the three deliverable families in that file's schema: homework
+#' (`n_assign`/`due_assign`, named `hw1`, `hw2`, ...), mini projects
+#' (`n_mini`/`due_mini`, named `mini1`, ...), and project deliverables
+#' (`stub_project`/`due_project`). Column groups that are absent are skipped.
+#'
+#' Project stubs on the site are hyphenated (`final-analysis`) while the
+#' `assign` names in `pars.R` use underscores (`final_analysis`), so hyphens are
+#' converted automatically. Use `stub_map` for anything that needs more than
+#' that, e.g. `c(presentation = "final_presentation")`.
+#'
+#' Instructor-run work (quizzes, exams, interviews, participation) has no repo
+#' submission and so gets no deadline; those simply never appear here.
+#'
+#' @param path Path to the course site's `schedule.csv`, e.g.
+#'   `here::here("..", "2026-Fall", "schedule.csv")`.
+#' @param time Time of day assignments are due, as `"HH:MM:SS"`. Defaults to
+#'   `"23:59:59"` (the 11:59pm deadline in the syllabus late policy).
+#' @param tz Time zone for the deadlines. Defaults to the system time zone.
+#' @param stub_map Optional named character vector mapping project stubs that
+#'   don't match their `assign` name after hyphen conversion.
+#' @return A tibble with `assign` and `due` (POSIXct) columns.
+#' @export
+read_due_dates <- function(path, time = "23:59:59", tz = Sys.timezone(),
+                           stub_map = NULL) {
+  schedule <- readr::read_csv(path, show_col_types = FALSE)
+  parse_due_dates(schedule, time = time, tz = tz, stub_map = stub_map)
+}
+
+#' Report student work committed after an assignment's deadline
+#'
+#' Run right after [pull_repos()], before grading, to see what arrived late.
+#' Two things are flagged, and neither alone is enough:
+#'
+#' * `hours_late` -- committed past the deadline. This is the primary signal,
+#'   and it is what catches the grading window: a typical `grade.R` pulls again
+#'   immediately before [push_repos()], so a student who pushes while you are
+#'   reviewing gets swept in *underneath* the feedback commit and would
+#'   otherwise look like they had been there all along.
+#' * `after_feedback` -- the commit arrived after that assignment's feedback was
+#'   pushed, so it definitely was not reviewed. `FALSE` means it was already in
+#'   the tree when you graded (it may or may not have been seen); `NA` means the
+#'   assignment has not been graded yet.
+#'
+#' The anchor for `after_feedback` is the last commit touching
+#' `feedback/<assign>.md` in that repo, which is written only when feedback is
+#' delivered -- so no snapshot file or extra state is needed.
+#'
+#' This is a read-only report: nothing is written and no git state is touched.
+#' Applying the course late policy stays a manual decision.
+#'
+#' @param roster Course roster data frame with `netID`, `enrolled`, and
+#'   `repo_col` columns; `name`, if present, is carried into the result.
+#' @param due Data frame with `assign` and `due` (POSIXct) columns, from
+#'   [read_due_dates()] or an `assignments` table that carries a `due` column.
+#'   Row order sets the report order.
+#' @param assign Assignment(s) to check: either a character vector of names, or
+#'   a `pars` list (its `$assign` element is used), so you can pass the `pars`
+#'   you are grading with and see only that assignment. Defaults to `NULL`,
+#'   which sweeps every assignment whose deadline has passed -- so a late `hw1`
+#'   landing while you grade `hw3` still surfaces.
+#' @param dir Directory containing the local clones, e.g.
+#'   `here::here("repos")`.
+#' @param repo_col Roster column holding each repo's exact name, also used as
+#'   the clone's folder name. Defaults to `"gh"`.
+#' @param instructor Instructor's git author email, whose commits are excluded.
+#'   Match on email, not name: the same person often commits under more than one
+#'   author name.
+#' @return Invisibly, a tibble with one row per student and assignment with late
+#'   activity: `netID`, `name`, `assign`, `n_commits`, `due`, `last_commit`,
+#'   `hours_late`, `after_feedback`, and `files`.
+#' @export
+check_late <- function(roster, due, assign = NULL, dir = here::here("repos"),
+                       repo_col = "gh",
+                       instructor = "john.helveston@gmail.com") {
+  if (!all(c("assign", "due") %in% names(due))) {
+    stop("`due` must have `assign` and `due` columns; see read_due_dates().",
+         call. = FALSE)
+  }
+
+  # Accept a pars list as well as a plain name, so grade.R can pass the pars
+  # it is already grading with.
+  if (is.list(assign)) {
+    if (is.null(assign$assign)) {
+      stop("`assign` is a list with no `$assign` element; pass a pars list ",
+           "or a character vector of assignment names.", call. = FALSE)
+    }
+    assign <- assign$assign
+  }
+
+  checks <- due[!is.na(due$due) & due$due < Sys.time(), ]
+  if (!is.null(assign)) {
+    checks <- checks[checks$assign %in% assign, ]
+  }
+  if (nrow(checks) == 0) {
+    cat("No assignments past their deadline to check.\n")
+    return(invisible(tibble::tibble()))
+  }
+
+  plan <- plan_repos(roster, org = "", repo_col)
+  out  <- list()
+
+  for (i in seq_len(nrow(plan))) {
+    path <- file.path(dir, plan$repo[i])
+    if (!dir.exists(file.path(path, ".git"))) {
+      cat("SKIP    ", plan$repo[i], "(not cloned; see clone_repos())\n")
+      next
+    }
+
+    for (j in seq_len(nrow(checks))) {
+      a   <- checks$assign[j]
+      due_at <- as.numeric(checks$due[j])
+      if (!dir.exists(file.path(path, a))) next
+
+      # Author dates as unix epoch (%at), never the ISO form: parsing
+      # "...T21:18:09-04:00" as a local wall clock silently shifts by the UTC
+      # offset and flags on-time students as late.
+      log <- git_run(c("-C", path, "log", "--format=%H%x09%at%x09%ae",
+                       "--", paste0(a, "/")))
+      lines <- strsplit(trimws(log$stdout), "\n", fixed = TRUE)[[1]]
+      if (log$status != 0 || !nzchar(trimws(log$stdout))) next
+
+      parts  <- strsplit(lines, "\t", fixed = TRUE)
+      sha    <- vapply(parts, `[`, character(1), 1)
+      at     <- as.numeric(vapply(parts, `[`, character(1), 2))
+      email  <- vapply(parts, `[`, character(1), 3)
+      keep   <- email != instructor & at > due_at
+      if (!any(keep)) next
+      sha <- sha[keep]
+      at  <- at[keep]
+
+      anchor <- git_run(c("-C", path, "log", "--format=%H", "-1", "--",
+                          file.path("feedback", paste0(a, ".md"))))
+      anchor <- trimws(anchor$stdout)
+      after <- if (!nzchar(anchor)) {
+        NA   # not graded yet
+      } else {
+        any(vapply(sha, function(s) {
+          git_run(c("-C", path, "merge-base", "--is-ancestor",
+                    s, anchor))$status != 0
+        }, logical(1)))
+      }
+
+      shown <- git_run(c("-C", path, "show", "--pretty=", "--name-only", sha))
+      files <- strsplit(trimws(shown$stdout), "\n", fixed = TRUE)[[1]]
+      files <- unique(files[nzchar(files)])
+      files <- files[!grepl("_files/", files, fixed = TRUE)]  # render artifacts
+
+      out[[length(out) + 1]] <- tibble::tibble(
+        netID          = plan$netID[i],
+        name           = plan$name[i],
+        assign         = a,
+        n_commits      = length(sha),
+        due            = checks$due[j],
+        last_commit    = as.POSIXct(max(at), tz = Sys.timezone(),
+                                    origin = "1970-01-01"),
+        hours_late     = round((max(at) - due_at) / 3600, 1),
+        after_feedback = after,
+        files          = paste(files, collapse = ", ")
+      )
+    }
+  }
+
+  if (length(out) == 0) {
+    cat("\nNo late submissions.\n")
+    return(invisible(tibble::tibble()))
+  }
+
+  late <- dplyr::bind_rows(out)
+  late <- late[order(match(late$assign, checks$assign), -late$hours_late), ]
+
+  cat("\n")
+  for (i in seq_len(nrow(late))) {
+    cat(sprintf(
+      "LATE  %-9s %-16s %5.1f hrs late (%s)  after_feedback: %s\n",
+      late$assign[i], late$netID[i], late$hours_late[i],
+      format(late$last_commit[i], "%b %d %H:%M"),
+      if (is.na(late$after_feedback[i])) "not graded yet"
+      else if (late$after_feedback[i]) "YES" else "no"
+    ))
+    cat("        ", late$files[i], "\n")
+  }
+  cat("\n", nrow(late), " late submission(s).\n", sep = "")
+
+  invisible(late)
+}
